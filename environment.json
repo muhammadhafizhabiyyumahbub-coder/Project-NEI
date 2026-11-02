@@ -84,13 +84,22 @@
     }
   },
   "pending_unverified": [
-    "Rhino 6 license edition (academic vs full)",
-    "SOLIDWORKS 2022 exact version and service pack",
-    "SOLIDWORKS COM accessibility (SldWorks.ApplicationPm)",
+    "Rhino 6 license edition (academic vs full) — check About dialog",
+    "SOLIDWORKS 2022 exact version and service pack — locate exe first",
+    "SOLIDWORKS COM accessibility (SldWorks.ApplicationPm) — test in Phase 6 spike",
     "SOLIDWORKS exe_path (not at standard install location)",
-    "Maxsurf 20 V8i automation API availability",
-    "Maxsurf 20 V8i supported file formats for import/export",
-    "Concurrent memory usage measurements"
-  ]
+    "Maxsurf 20 V8i automation API availability — check ModelerAutomation.pdf",
+    "Maxsurf 20 V8i supported file formats for import/export — check docs",
+    "Concurrent memory usage measurements — measure when software running"
+  ],
+  "phase_0_conclusion": {
+    "status": "COMPLETE",
+    "rhino6_bitness": "64-bit (RESOLVED)",
+    "rhino6_transport_method": "RhinoPython Method 2 (PASSED box test)",
+    "dashboard_hosting": "Separate Vite (port 5173) + FastAPI static (DECIDED)",
+    "python_version": "3.13.7 (system default, all libs compatible)",
+    "maxsurf_actual_version": "Maxsurf 20 V8i (not Enterprise v8.1)",
+    "ready_for_phase_1": true
+  }
 }
 
