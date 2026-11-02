@@ -12,7 +12,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  NEI Backend (Python 3.12, FastAPI)                            │
+│  NEI Backend (Python 3.13, FastAPI)                            │
 │                                                               │
 │  ┌──────────┐  ┌──────────────┐  ┌────────────────────────┐   │
 │  │  API     │  │  Orchestrator│  │  Execution Policy       │   │
@@ -378,3 +378,4 @@ No connector, no probe, no placeholder code. Documented in `CONNECTOR_SPEC.md` a
 ---
 
 **Tahap 2 complete. Awaiting "lanjut" before writing Tahap 3 documents.**
+

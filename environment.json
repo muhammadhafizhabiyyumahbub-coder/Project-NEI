@@ -20,7 +20,7 @@
   "python": {
     "version": "3.13.7",
     "path": null,
-    "note": "System Python 3.13.7 detected. Architecture spec targets 3.12. Verify 3.12 availability or adjust spec."
+    "note": "System Python 3.13.7 detected. Architecture spec targets 3.13. Verify 3.13 availability or adjust spec."
   },
   "rhino6": {
     "detected": true,
@@ -93,3 +93,4 @@
     "Concurrent memory usage measurements"
   ]
 }
+

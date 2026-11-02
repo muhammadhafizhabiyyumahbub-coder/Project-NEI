@@ -2,7 +2,7 @@
 name = "nei"
 version = "0.1.0"
 description = "NEI — Nautical Engineering Intelligence: local-first AI engineering assistant"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.20",
@@ -30,5 +30,6 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = false
+

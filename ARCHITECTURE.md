@@ -41,7 +41,7 @@ NEI is a local-first engineering assistant for naval architecture and marine eng
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  NEI Backend (Python 3.12, FastAPI, single process)             │
+│  NEI Backend (Python 3.13, FastAPI, single process)             │
 │                                                                │
 │  API layer ── Orchestrator ── Execution Policy ── Connector Reg│
 │  (routes)    (Planner +     (policy gate,  (capability-driven)│
@@ -174,7 +174,7 @@ Production (same machine):
 
 | Area | Decision | Status |
 |------|----------|--------|
-| Backend runtime | Python 3.12 | FAKTA |
+| Backend runtime | Python 3.13 | FAKTA |
 | Web framework | FastAPI + Uvicorn | FAKTA |
 | Schemas | Pydantic v2 | FAKTA |
 | Database | SQLite WAL, single writer | FAKTA |
@@ -203,3 +203,4 @@ Production (same machine):
 | Multi-user / auth passwords | Never (local-first single user) | Scope |
 | Distributed microservices | Never for MVP | No measured need |
 | Regulatory certification output | Phase 9+ | Requires full evidence + applicability engine |
+

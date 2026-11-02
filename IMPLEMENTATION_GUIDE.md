@@ -248,3 +248,4 @@ Create all pages from `FRONTEND_SPEC.md` Phase 2 section:
 - No hardcoded paths, keys, or personal data
 - ANSYS: no code, no probe, no placeholder in any phase
 - Do not mark a capability SUPPORTED without a working test on this machine
+
