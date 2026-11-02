@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-11-02T00:00:00Z",
+  "machine": {
+    "os": "Windows 11",
+    "os_64bit": true,
+    "cpu": {
+      "model": "Intel Core i3-8145U @ 2.10GHz",
+      "cores": 2,
+      "logical_processors": 4
+    },
+    "ram_bytes": 8395149312,
+    "ram_gb": 8.0,
+    "gpu": {
+      "integrated": "Intel UHD Graphics 620",
+      "discrete": "NVIDIA GeForce MX230",
+      "mx230_driver": "31.0.15.5186"
+    },
+    "note": "Core i3 gen 8, 8GB RAM, MX230. Resource budget is a real design constraint."
+  },
+  "python": {
+    "version": "3.13.7",
+    "path": null,
+    "note": "System Python 3.13.7 detected. Architecture spec targets 3.12. Verify 3.12 availability or adjust spec."
+  },
+  "rhino6": {
+    "detected": true,
+    "exe_path": "D:\\Rhino 6\\System\\Rhino.exe",
+    "version": "6.18.19266.14201",
+    "product_name": "Rhinoceros",
+    "bitness": "64",
+    "bitness_evidence": "RhRdkShellExt_x64.dll present in D:\\Rhino 6\\System; RhinoCommon.dll is 64-bit build",
+    "rhinoc_common_version": "6.18.19266.14201",
+    "running": true,
+    "running_pid": 15216,
+    "embedded_python": "Python 2.7 (do NOT import into backend Python 3.x)",
+    "license_status": "UNVERIFIED",
+    "license_note": "Edition (academic vs full) not confirmed. Check Rhino's About dialog or license file."
+  },
+  "solidworks_2022": {
+    "detected": true,
+    "registry_64": "HKLM:\\SOFTWARE\\Wow6432Node\\SolidWorks\\SOLIDWORKS 2022",
+    "registry_32": "HKLM:\\SOFTWARE\\SolidWorks\\SOLIDWORKS 2022",
+    "exe_path": "UNVERIFIED (sw.exe not found at C:\\Program Files\\SolidWorks Corp\\SolidWorks)",
+    "version": "UNVERIFIED",
+    "service_pack": "UNVERIFIED",
+    "com_class": "UNVERIFIED (SldWorks.ApplicationPm accessibility not tested)",
+    "license_status": "UNVERIFIED",
+    "license_note": "Registry keys SOLIDWORKS 2022 and SOLIDWORKS PCB present. License state unconfirmed."
+  },
+  "maxsurf": {
+    "detected": true,
+    "product_name": "Bentley Maxsurf 20 V8i",
+    "install_path": "C:\\Program Files\\Bentley\\Engineering\\Maxsurf 20 V8i",
+    "version": "20.00.01.59",
+    "note": "Product is Maxsurf 20 V8i (not 'Maxsurf Enterprise v8.1' as in original spec). Spec needs correction."
+  },
+  "maxsurf_components": {
+    "modeler_64": "MaxsurfModeler64.exe (v20.00.01.59)",
+    "stability_enterprise_64": "MaxsurfStabilityEnterprise64.exe (v20.00.01.59)",
+    "resistance_64": "MaxsurfResistance64.exe",
+    "structure_64": "MaxsurfStructure64.exe",
+    "motions_64": "MaxsurfMotions64.exe",
+    "vpp_64": "MaxsurfVPP64.exe",
+    "fitting_64": "MaxsurfFitting64.exe",
+    "link_64": "MaxsurfLink64.exe",
+    "automation_samples_dir": "C:\\Program Files\\Bentley\\Engineering\\Maxsurf 20 V8i\\Automation Samples",
+    "rhino_plugin_doc": "RhinoPlugInManual.pdf present — Maxsurf has Rhino plugin integration",
+    "com_apis_available": "UNVERIFIED",
+    "file_formats_supported": "UNVERIFIED (check ModelerAutomation.pdf and StabilityAutomation.pdf)"
+  },
+  "ansys": {
+    "detected": false,
+    "status": "DEFERRED",
+    "note": "Not installed. No ANSYS connector will be built until user confirms installation."
+  },
+  "resource_budget": {
+    "ram_total_gb": 8.0,
+    "estimated_usage": {
+      "rhino6_running_mb": "UNVERIFIED (measure when Rhino is open)",
+      "solidworks_running_mb": "UNVERIFIED",
+      "backend_python_mb": "UNVERIFIED (estimate 150-300MB)",
+      "browser_dev_server_mb": "UNVERIFIED (estimate 200-400MB)",
+      "concurrent_limit_note": "With 8GB total OS+apps, running Rhino + SOLIDWORKS + Maxsurf + backend + browser simultaneously is likely to exceed available RAM. Policy: one heavy software at a time recommended."
+    }
+  },
+  "pending_unverified": [
+    "Rhino 6 license edition (academic vs full)",
+    "SOLIDWORKS 2022 exact version and service pack",
+    "SOLIDWORKS COM accessibility (SldWorks.ApplicationPm)",
+    "SOLIDWORKS exe_path (not at standard install location)",
+    "Maxsurf 20 V8i automation API availability",
+    "Maxsurf 20 V8i supported file formats for import/export",
+    "Concurrent memory usage measurements"
+  ]
+}
