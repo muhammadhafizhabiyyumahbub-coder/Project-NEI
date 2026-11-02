@@ -1,6 +1,6 @@
 # NEI — Connector Specification
 
-**Scope:** Common connector contract + capability specs for Rhino 6, SOLIDWORKS 2022, Maxsurf v8.1. ANSYS is DEFERRED.
+**Scope:** Common connector contract + capability specs for Rhino 6, SOLIDWORKS 2022, Maxsurf 20 V8i. ANSYS is DEFERRED.
 
 > Capability claims in this document are `UNKNOWN` until confirmed by a Phase 0 probe or Phase 3+ spike. Do not mark a capability `SUPPORTED` without a working test.
 
@@ -161,7 +161,7 @@ Before implementing any action:
 
 ---
 
-## Maxsurf Enterprise v8.1 (`nei/connectors/maxsurf81/`)
+## Maxsurf 20 V8i (`nei/connectors/maxsurf_v8i/`)
 
 **Phase:** 7
 

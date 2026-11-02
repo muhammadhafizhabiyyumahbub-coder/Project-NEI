@@ -55,7 +55,7 @@ NEI is a local-first engineering assistant for naval architecture and marine eng
 └──────────────────────────────────────────────────────────────────┘
        │                     │                     │
        ▼                     ▼                     ▼
-  Rhino 6 (COM/IPC)  SOLIDWORKS 2022 (COM)  Maxsurf v8.1 (file)
+  Rhino 6 (COM/IPC)  SOLIDWORKS 2022 (COM)  Maxsurf 20 V8i (file)
   [Phase 3]          [Phase 6]             [Phase 7]
 ```
 
@@ -83,7 +83,7 @@ NEI is a local-first engineering assistant for naval architecture and marine eng
 | Connector registry | `nei/connectors/registry.py` | Discover + register available connectors | 1 |
 | Rhino 6 connector | `nei/connectors/rhino6/` | Rhino 6 automation | 3 |
 | SOLIDWORKS connector | `nei/connectors/solidworks2022/` | SW 2022 COM automation | 6 |
-| Maxsurf connector | `nei/connectors/maxsurf81/` | Maxsurf file exchange | 7 |
+| Maxsurf connector | `nei/connectors/maxsurf_v8i/` | Maxsurf file exchange | 7 |
 | Verification engine | `nei/verification/engine.py` | Postcondition checks, verification records | 3 |
 | Evidence engine | `nei/evidence/` | Ingestion, retrieval, citation | 4 |
 | Knowledge registries | `nei/knowledge/` | Source, formula, method, unit registries | 4–5 |

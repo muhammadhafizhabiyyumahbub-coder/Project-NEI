@@ -382,8 +382,8 @@ Get verification record for a task.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/v1/connectors/maxsurf81/probe` | Detect + version + format capabilities |
-| POST | `/api/v1/connectors/maxsurf81/actions` | Execute allowlisted Maxsurf operation |
+| POST | `/api/v1/connectors/maxsurf_v8i/probe` | Detect + version + format capabilities |
+| POST | `/api/v1/connectors/maxsurf_v8i/actions` | Execute allowlisted Maxsurf operation |
 
 ---
 

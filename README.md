@@ -8,7 +8,7 @@ Local-first AI engineering assistant for Naval Architecture and Marine Engineeri
 - Produces structured execution plans (LLM as planner, not calculator)
 - Retrieves traceable technical evidence (journals, books, IMO/BKI/IACS standards)
 - Runs deterministic calculations via a tested calculation engine
-- Controls engineering software through capability-driven connectors (Rhino 6, SOLIDWORKS 2022, Maxsurf v8.1)
+- Controls engineering software through capability-driven connectors (Rhino 6, SOLIDWORKS 2022, Maxsurf 20 V8i)
 - Verifies results from software output (not script stdout)
 - Stores artifacts, audit logs, and provenance locally
 - Generates engineering reports with source citations

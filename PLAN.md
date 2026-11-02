@@ -16,7 +16,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 - Measured resource budget: concurrent memory of all software + backend + browser
 - Rhino 6 spike report (transport method selection, see `RHINO6_INTEGRATION_SPIKE.md`)
 - SOLIDWORKS 2022 probe: detected? version? COM available? license state?
-- Maxsurf v8.1 probe: detected? version? file formats? automation interface?
+- Maxsurf 20 V8i probe: detected? version? file formats? automation interface?
 - License policy check for each software (automation permitted?)
 
 ### Acceptance criteria
@@ -223,7 +223,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ---
 
-## Phase 7 — Maxsurf v8.1 connector
+## Phase 7 — Maxsurf 20 V8i connector
 
 **Goal:** File-exchange or API-driven Maxsurf integration.
 

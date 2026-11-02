@@ -15,7 +15,7 @@ Create `scripts/check_environment.py`:
 - Detect Python version and path
 - Detect Rhino 6: registry key + exe path, version, bitness (UNVERIFIED until confirmed)
 - Detect SOLIDWORKS 2022: registry + exe path, version, service pack
-- Detect Maxsurf v8.1: exe path, version
+- Detect Maxsurf 20 V8i: exe path, version
 - Detect ANSYS: report not found (deferred)
 - Measure RAM, CPU model, GPU model
 - Write `data/environment.json` with all findings. Use `UNVERIFIED` for unknowns.

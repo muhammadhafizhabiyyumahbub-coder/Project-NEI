@@ -34,7 +34,7 @@
 └───────────────────────────────────────────────────────────────┘
          │                    │                    │
          ▼                    ▼                    ▼
-   Rhino 6 (COM/IPC)  SOLIDWORKS 2022 (COM)  Maxsurf v8.1 (file)
+   Rhino 6 (COM/IPC)  SOLIDWORKS 2022 (COM)  Maxsurf 20 V8i (file)
 ```
 
 **Repository structure (authoritative, replaces `Arsitektur.py` §5):**
@@ -124,7 +124,7 @@ NEI/
 │   │   ├── discovery.py
 │   │   ├── rhino6/
 │   │   ├── solidworks2022/
-│   │   └── maxsurf81/
+│   │   └── maxsurf_v8i/
 │   ├── automation/
 │   │   ├── desktop_session.py
 │   │   ├── ui_automation.py
@@ -196,7 +196,7 @@ NEI/
 **Decision: OQ1 resolved — backend runs in the user's interactive desktop session.**
 
 Rationale:
-- Rhino 6, SOLIDWORKS 2022, and Maxsurf v8.1 are desktop GUI applications.
+- Rhino 6, SOLIDWORKS 2022, and Maxsurf 20 V8i are desktop GUI applications.
 - COM automation (SOLIDWORKS) and RhinoPython/RhinoCommon (Rhino 6) require the same Windows desktop session (Session 1), not the Windows service session (Session 0).
 - A Windows service cannot reach COM objects in the user's interactive session without complex cross-session marshalling.
 - This is a single-user laptop. There is no need for a service.
@@ -318,7 +318,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 | 4 | Evidence engine + EEP | 3 | Source registry, PDF ingestion, lexical search, formula registry, citation builder | Ingest doc, retrieve passage with page, mark UNVERIFIED source |
 | 5 | Engineering core | 4 | Unit-safe calc framework, formula lifecycle, reference cases, calculation verification | Same inputs → same result; wrong units rejected |
 | 6 | SOLIDWORKS connector | 3, 5 | SW 2022 probe, read-only inspection, disposable test part | No unsupported API assumed; version-tested |
-| 7 | Maxsurf connector | 3, 5 | Maxsurf v8.1 probe, file exchange, GUI fallback | Every claim has reproducible test |
+| 7 | Maxsurf connector | 3, 5 | Maxsurf 20 V8i probe, file exchange, GUI fallback | Every claim has reproducible test |
 | 8 | Cross-software workflow | 6, 7 | Artifact handoff, unit mapping, import/export validation | Test artifact moves between 2 apps; geometry/units verified |
 | 9 | Advanced domains | 5, 8 | More formulas, stability/resistance methods, report export | Each method has source + reference case |
 
@@ -336,7 +336,7 @@ User opens dashboard → creates project → requests 10×3×1 box in Rhino 6 �
 | S1 | Rhino 6 detect + version + bitness | `environment.json` records exact version, 32/64-bit, exe path | Cannot detect or version unknown |
 | S2 | Rhino 6 transport method test | One of: RhinoCommon .NET plugin, RhinoPython, command-line, IPC — successfully creates a box in a disposable doc and reads back bounding box | All 5 methods fail or are unavailable |
 | S3 | SOLIDWORKS 2022 COM detect | `swProcess` accessible via `GetObject`, version reported | No running instance and launch fails, or COM not available |
-| S4 | Maxsurf v8.1 file format probe | Identify supported import/export formats from installed docs | No automation interface found |
+| S4 | Maxsurf 20 V8i file format probe | Identify supported import/export formats from installed docs | No automation interface found |
 | S5 | License check | Each software's edition + automation permission documented | Cannot confirm; mark UNVERIFIED |
 | S6 | Resource budget measurement | Concurrent memory usage of all software + backend + browser recorded | Machine OOMs; policy "one heavy software at a time" confirmed |
 
