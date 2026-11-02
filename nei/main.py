@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from nei.api import routes, sse
+from nei.connectors import api as connectors_api
 from nei.core.config import settings
 from nei.core.database import init_db
 
@@ -38,6 +39,7 @@ app.add_middleware(
 
 app.include_router(routes.router, prefix="/api/v1")
 app.include_router(sse.router, prefix="/api/v1")
+app.include_router(connectors_api.router, prefix="/api/v1")
 
 if settings.static_build_path.exists():
     app.mount("/", StaticFiles(html=True, directory=str(settings.static_build_path)), name="static")
