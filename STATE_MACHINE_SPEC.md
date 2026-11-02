@@ -53,7 +53,7 @@
 | `RUNNING` | `user_cancelled` | — | `CANCELLED` | release lock; detach if needed |
 | `VERIFYING` | `all_postconditions_passed` | every check PASSED within tolerance | `COMPLETED` | artifact saved; `completed_at` set |
 | `VERIFYING` | `postcondition_failed` | one or more checks FAILED | `NEEDS_REVIEW` | verification record saved with failed checks |
-| `RECOVERING` | `software_back` | user confirms software is responsive | `QUEUED` | re-acquire lock; re-execute from last step |
+| `RECOVERING` | `software_back` | connector `health_check` returns OK (automatic, no user action needed) | `QUEUED` | re-acquire lock; re-execute from last step |
 | `RECOVERING` | `emergency_timeout` | > 300s (configurable) | `FAILED` | `errors_json` set with incident detail |
 | `RECOVERING` | `user_cancelled` | — | `CANCELLED` | |
 | `NEEDS_REVIEW` | `user_retry` | — | *(new task)* | new task created with `parent_task_id`; original stays terminal |

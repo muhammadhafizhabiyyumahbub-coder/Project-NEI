@@ -129,7 +129,7 @@ Create a new task.
 
 **Errors:** `PROJECT_NOT_FOUND` (404), `VALIDATION_FAILED` (422)
 
-#### GET `/api/v1/projects/{project_id}/tasks`
+> `risk_level` is derived by the planner from `task_type` and the tool actions in the plan. It is not supplied by the user in the request body.
 List tasks in a project.
 
 **Query params:** `cursor`, `limit`, `state` (filter, optional)

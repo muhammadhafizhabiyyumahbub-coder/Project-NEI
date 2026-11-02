@@ -150,6 +150,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 - Engineering calculations
 - Evidence retrieval
 - Report export
+- L3 risk level (disallowed in Alpha 0.1; L0–L2 only)
 
 ---
 

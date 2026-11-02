@@ -86,6 +86,7 @@ CREATE TABLE tasks (
     errors_json TEXT,
     warnings_json TEXT,
     connector_id TEXT,
+    verification_json TEXT,
     schema_version INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     started_at TEXT,
@@ -317,8 +318,8 @@ CREATE TABLE schema_migrations (
 | `evidence_chunks` | 4 | Extracted text with provenance | `id, source_id, page, section, text, checksum` |
 | `formulas` | 5 | Formula records with lifecycle | `id, name, domain, equation_text, canonical_units, source_refs, review_status, version` |
 | `calculation_runs` | 5 | Deterministic calc execution | `id, task_id, formula_id, inputs_json, result_json, status, trace_json, timestamp` |
-| `connectors` | 1 | Registered connector metadata | `id, name, status, version, exe_path, bitness, last_probe_ts` |
-| `connector_probes` | 1 | Probe history | `id, connector_id, probe_type, result_json, timestamp` |
+| `connectors` | 3 | Registered connector metadata | `id, name, status, version, exe_path, bitness, last_probe_ts` |
+| `connector_probes` | 3 | Probe history | `id, connector_id, probe_type, result_json, timestamp` |
 | `settings` | 1 | User-configurable settings | `key, value, updated_at` |
 
 > These tables are created when their phase starts. Do not create them in Phase 1.
@@ -330,7 +331,7 @@ CREATE TABLE schema_migrations (
 | Version | File | Contents |
 |---------|------|----------|
 | 1 | `001_initial.sql` | `projects`, `tasks`, `task_events`, `approvals`, `artifacts`, `audit_events`, `model_usage`, `app_state`, `schema_migrations` |
-| 2 | `002_connectors.sql` | `connectors`, `connector_probes` |
+| 2 | `002_connectors.sql` | `connectors`, `connector_probes`, `tasks.verification_json` (ALTER TABLE) |
 | 3 | `003_evidence.sql` | `evidence_sources`, `evidence_chunks` |
 | 4 | `004_formulas.sql` | `formulas`, `calculation_runs` |
 | 5 | `005_settings.sql` | `settings` |
