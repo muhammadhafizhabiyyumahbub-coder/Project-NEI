@@ -1,35 +1,51 @@
-"""State machine for task lifecycle."""
+"""Task lifecycle state machine.
+
+Implements the transition table from STATE_MACHINE_SPEC.md.
+"""
 from enum import Enum
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any
 
 
 class TaskStatus(Enum):
     PENDING = "pending"
     PLANNING = "planning"
-    POLICY_CHECK = "policy_check"
-    APPROVED = "approved"
-    EXECUTING = "executing"
+    NEEDS_INPUT = "needs_input"
+    VALIDATING = "validating"
+    WAITING_APPROVAL = "waiting_approval"
+    QUEUED = "queued"
+    RUNNING = "running"
     VERIFYING = "verifying"
+    RECOVERING = "recovering"
     COMPLETED = "completed"
     FAILED = "failed"
-    RECOVERING = "recovering"
+    CANCELLED = "cancelled"
+    NEEDS_REVIEW = "needs_review"
 
 
 class TaskStateTransition:
-    """Valid state transitions for tasks."""
-    
+    """Legal transitions and their side effects."""
+
     VALID = {
-        TaskStatus.PENDING: [TaskStatus.PLANNING, TaskStatus.POLICY_CHECK],
-        TaskStatus.PLANNING: [TaskStatus.POLICY_CHECK, TaskStatus.PENDING],
-        TaskStatus.POLICY_CHECK: [TaskStatus.APPROVED, TaskStatus.PENDING],
-        TaskStatus.APPROVED: [TaskStatus.EXECUTING, TaskStatus.PENDING],
-        TaskStatus.EXECUTING: [TaskStatus.VERIFYING, TaskStatus.FAILED],
-        TaskStatus.VERIFYING: [TaskStatus.COMPLETED, TaskStatus.FAILED],
+        TaskStatus.PENDING: [TaskStatus.PLANNING, TaskStatus.CANCELLED],
+        TaskStatus.PLANNING: [TaskStatus.NEEDS_INPUT, TaskStatus.VALIDATING, TaskStatus.CANCELLED],
+        TaskStatus.NEEDS_INPUT: [TaskStatus.PLANNING, TaskStatus.CANCELLED],
+        TaskStatus.VALIDATING: [TaskStatus.WAITING_APPROVAL, TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED],
+        TaskStatus.WAITING_APPROVAL: [TaskStatus.QUEUED, TaskStatus.CANCELLED],
+        TaskStatus.QUEUED: [TaskStatus.RUNNING, TaskStatus.CANCELLED],
+        TaskStatus.RUNNING: [TaskStatus.VERIFYING, TaskStatus.RECOVERING, TaskStatus.CANCELLED],
+        TaskStatus.VERIFYING: [TaskStatus.COMPLETED, TaskStatus.NEEDS_REVIEW, TaskStatus.FAILED],
+        TaskStatus.RECOVERING: [TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.COMPLETED: [],
-        TaskStatus.FAILED: [TaskStatus.RECOVERING],
-        TaskStatus.RECOVERING: [TaskStatus.PENDING, TaskStatus.FAILED],
+        TaskStatus.FAILED: [],
+        TaskStatus.CANCELLED: [],
+        TaskStatus.NEEDS_REVIEW: [],
     }
 
     @classmethod
     def can_transition(cls, from_status: TaskStatus, to_status: TaskStatus) -> bool:
-        """Check if transition is valid."""
         return to_status in cls.VALID[from_status]
+
+    @classmethod
+    def is_terminal(cls, status: TaskStatus) -> bool:
+        return status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)

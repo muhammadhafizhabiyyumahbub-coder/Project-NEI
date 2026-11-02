@@ -1,71 +1,64 @@
-"""Database initialization and session management."""
+"""Database: WAL SQLite with sequential migrations.
+
+Schema follows DATABASE_SCHEMA.md.
+Use:  async with get_db() as db: ...
+"""
 import aiosqlite
 from pathlib import Path
-from nei.core.config import settings
 
 DB_PATH = Path("data/nei.db")
+MIGRATIONS_DIR = Path("database/migrations")
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _make_conn() -> aiosqlite.Connection:
+    return aiosqlite.connect(str(DB_PATH))
+
+
+def get_db():
+    """Return an async context manager yielding an aiosqlite connection."""
+    return _make_conn()
 
 
 async def init_db() -> None:
-    """Initialize database with schema."""
+    """Initialize DB: schema_migrations, app_state, and all migration files."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.executescript("""
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                vessel_type TEXT,
-                description TEXT,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-            
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY,
-                project_id TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                action TEXT NOT NULL,
-                target TEXT,
-                params TEXT,
-                risk_level TEXT DEFAULT 'L0',
-                result TEXT,
-                verification_json TEXT,
-                error TEXT,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                started_at TEXT,
-                completed_at TEXT,
-                FOREIGN KEY (project_id) REFERENCES projects(id)
-            );
-            
-            CREATE TABLE IF NOT EXISTS artifacts (
-                id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                artifact_type TEXT NOT NULL,
-                filename TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                file_hash TEXT,
-                metadata TEXT,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                FOREIGN KEY (task_id) REFERENCES tasks(id)
-            );
-            
-            CREATE TABLE IF NOT EXISTS policies (
-                id TEXT PRIMARY KEY,
-                action TEXT NOT NULL,
-                risk_level TEXT NOT NULL DEFAULT 'L0',
-                auto_approve INTEGER DEFAULT 0,
-                requires_verification INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-            
-            CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
-            CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-            CREATE INDEX IF NOT EXISTS idx_artifacts_task ON artifacts(task_id);
+    MIGRATIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+    db = _make_conn()
+    async with db:
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA foreign_keys=ON")
+        await db.execute("PRAGMA synchronous=NORMAL")
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS app_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        """)
+
+        applied = {
+            row[0] for row in await db.execute_fetchall(
+                "SELECT version FROM schema_migrations")
+        }
+        for f in sorted(MIGRATIONS_DIR.glob("*.sql")):
+            version = int(f.stem.split("_")[0])
+            if version in applied:
+                continue
+            await db.executescript(f.read_text(encoding="utf-8"))
+            await db.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+                (version, _now()),
+            )
         await db.commit()
-
-
-async def get_db():
-    """Get database connection."""
-    return aiosqlite.connect(DB_PATH)
