@@ -76,3 +76,14 @@ The safe spike test (10×3×1 box in a disposable document) can be run **immedia
 | `_RunPythonScript` without GUI | UNVERIFIED — test in Phase 0 |
 | Named pipe / HTTP helper | UNVERIFIED — test in Phase 0 |
 | Third-party plugin loading permitted | UNVERIFIED — check Rhino plugin settings |
+
+### RhinoPython Method 2 Test Result
+
+- **Status:** PASSED
+- **Dimensions:** L=10.0 W=3.0 H=1.0 (within 0.001 tolerance)
+- **Units:** Millimeters
+- **Artifact:** data/spike/rhino_box_test.3dm saved
+- **Result file:** data/spike/rhino_box_test.json
+- **Time:** 2026-11-02 22:59:12
+
+**Conclusion:** RhinoPython Method 2 successfully created and verified the box dimensions.
