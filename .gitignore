@@ -1,0 +1,39 @@
+# NEI — Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Data (local, never commit)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node / frontend
+node_modules/
+apps/ui/dist/
+apps/ui/.vite/
+
+# Backups
+backups/
