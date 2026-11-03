@@ -26,7 +26,7 @@ Local-first AI engineering assistant for Naval Architecture and Marine Engineeri
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.12, FastAPI, Pydantic v2, SQLite (WAL) |
+| Backend | Python 3.13, FastAPI, Pydantic v2, SQLite (WAL) |
 | Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Automation | COM (SOLIDWORKS), RhinoCommon/RhinoPython (Rhino 6), file exchange (Maxsurf) |
 | LLM | External OpenAI-compatible endpoint (privacy mode: template-only) |

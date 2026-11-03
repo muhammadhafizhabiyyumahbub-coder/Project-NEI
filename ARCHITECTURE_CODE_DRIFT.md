@@ -79,9 +79,11 @@
 
 | Doc / config | Claimed version |
 |-------------|----------------|
-| `README.md` | Python 3.12 |
+| `README.md` | Python 3.13 (corrected) |
+
+**Note:** All Python version references have been corrected to 3.13 in this commit.
 | `pyproject.toml` `requires-python` | `>=3.13` |
-| `ARCHITECTURE.md` §5 | Python 3.12 |
+| `ARCHITECTURE.md` §5 | Python 3.13 (corrected) |
 | Actual runtime | Python 3.13.7 |
 
 **All docs and configs must be aligned to Python 3.13.** (Butir 7)

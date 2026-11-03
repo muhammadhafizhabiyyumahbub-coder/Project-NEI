@@ -51,7 +51,7 @@
 | Rhino 6 compatibility | RhinoPython is bundled with Rhino 6. Python 2.7 only. |
 | Runtime | Embedded in Rhino process; no separate process |
 | Strengths | No external build; scripts run inside Rhino's session; direct access to RhinoCommon via Python |
-| Weaknesses | Python 2.7 is EOL; no f-strings; limited stdlib; cannot share packages with backend Python 3.12; script must be syntactically valid Python 2 |
+| Weaknesses | Python 2.7 is EOL; no f-strings; limited stdlib; cannot share packages with backend Python 3.13; script must be syntactically valid Python 2 |
 | Security | Script executes in Rhino's Python env — sandbox required (no `import os`, no `subprocess`) |
 | Stability | Script crash kills the RhinoPython session; Rhino process survives |
 | Parameter passing | Write script to file, invoke via Rhino command or `_RunPythonScript` |
@@ -93,7 +93,7 @@
 | Aspect | Detail |
 |--------|--------|
 | Rhino 6 compatibility | Helper must be loaded into Rhino 6's process (as a plugin or RhinoPython script). Same constraints as Methods 1 and 2. |
-| Runtime | Helper lives in Rhino's process; backend is a separate Python 3.12 process |
+| Runtime | Helper lives in Rhino's process; backend is a separate Python 3.13 process |
 | Strengths | Clean separation; structured JSON in/out; no file polling; low latency |
 | Weaknesses | Requires helper to be loaded at Rhino startup (user must start Rhino before NEI can use it); bitness must match for C# helper |
 | Security | Named pipe with per-connection auth token; no public interface |

@@ -83,7 +83,7 @@ class Capability:
 
 ### Known constraints
 
-- Rhino 6 embedded RhinoPython is Python 2.7. **Do not** import Rhino 6 packages into the backend Python 3.12 environment.
+- Rhino 6 embedded RhinoPython is Python 2.7. **Do not** import Rhino 6 packages into the backend Python 3.13 environment.
 - Rhino 6 bitness (32/64) is UNVERIFIED. Affects which RhinoCommon assemblies can be loaded.
 - Exact service release is UNVERIFIED.
 

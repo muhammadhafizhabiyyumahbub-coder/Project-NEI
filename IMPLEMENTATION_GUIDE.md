@@ -70,7 +70,7 @@ Create `pyproject.toml`:
 [project]
 name = "nei"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]",
