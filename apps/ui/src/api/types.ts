@@ -5,6 +5,13 @@
 
 
 export interface paths {
+  "/api/v1/auth/session": {
+    /**
+     * Auth Session
+     * @description Mint a fresh session token cookie (single-user, no password).
+     */
+    post: operations["auth_session_api_v1_auth_session_post"];
+  };
   "/api/v1/health": {
     /**
      * Health
@@ -21,7 +28,7 @@ export interface paths {
   "/api/v1/projects/{project_id}/tasks": {
     /**
      * List Project Tasks
-     * @description All tasks under a project, newest first.
+     * @description All tasks under a project, newest first. 404 if project does not exist.
      */
     get: operations["list_project_tasks_api_v1_projects__project_id__tasks_get"];
     /**
@@ -45,6 +52,47 @@ export interface paths {
     /** Cancel Task Endpoint */
     post: operations["cancel_task_endpoint_api_v1_tasks__task_id__cancel_post"];
   };
+  "/api/v1/tasks/{task_id}/verify": {
+    /**
+     * Verify Task Endpoint
+     * @description Run verification checks against connector result. Task must be in VERIFYING state.
+     */
+    post: operations["verify_task_endpoint_api_v1_tasks__task_id__verify_post"];
+  };
+  "/api/v1/tasks/{task_id}/execute": {
+    /**
+     * Execute Task Endpoint
+     * @description Execute connector action for a RUNNING task, return connector result.
+     *
+     * Security:
+     * - Action must be in the connector allowlist (no arbitrary commands/scripts)
+     * - Params validated: numeric ranges for dimensions, sandbox check for artifact_path
+     * - Policy gate enforced by risk level; L2 requires human approval
+     * - Audit event written for every attempt
+     */
+    post: operations["execute_task_endpoint_api_v1_tasks__task_id__execute_post"];
+  };
+  "/api/v1/tasks/{task_id}/approve": {
+    /**
+     * Approve Task Endpoint
+     * @description Approve a task in WAITING_APPROVAL state, transition to QUEUED.
+     */
+    post: operations["approve_task_endpoint_api_v1_tasks__task_id__approve_post"];
+  };
+  "/api/v1/tasks/{task_id}/provide-input": {
+    /**
+     * Provide Input Endpoint
+     * @description Provide missing inputs for a task in NEEDS_INPUT state, re-enter PLANNING.
+     */
+    post: operations["provide_input_endpoint_api_v1_tasks__task_id__provide_input_post"];
+  };
+  "/api/v1/tasks/{task_id}/retry": {
+    /**
+     * Retry Task Endpoint
+     * @description Retry a failed/needs-review task, create a new child task.
+     */
+    post: operations["retry_task_endpoint_api_v1_tasks__task_id__retry_post"];
+  };
   "/api/v1/tasks/{task_id}/events": {
     /** Task Events */
     get: operations["task_events_api_v1_tasks__task_id__events_get"];
@@ -63,13 +111,68 @@ export interface paths {
   "/api/v1/connectors/{connector_id}/probe": {
     /**
      * Probe Connector
-     * @description Phase 2 mock probe: returns UNKNOWN status + version=None.
-     *
-     * Phase 3+ replaces this body with the real detect/version/COM/file-format
-     * probe. Endpoint path stays stable so the connector-health UI works from
-     * Phase 2 forward.
+     * @description Probe a connector: real detect/version for rhino6, mock for others.
      */
     post: operations["probe_connector_api_v1_connectors__connector_id__probe_post"];
+  };
+  "/api/v1/evidence/sources": {
+    /** List Sources Endpoint */
+    get: operations["list_sources_endpoint_api_v1_evidence_sources_get"];
+    /** Ingest Endpoint */
+    post: operations["ingest_endpoint_api_v1_evidence_sources_post"];
+  };
+  "/api/v1/evidence/sources/{source_id}": {
+    /** Get Source Endpoint */
+    get: operations["get_source_endpoint_api_v1_evidence_sources__source_id__get"];
+  };
+  "/api/v1/evidence/sources/{source_id}/checksum": {
+    /** Checksum Endpoint */
+    post: operations["checksum_endpoint_api_v1_evidence_sources__source_id__checksum_post"];
+  };
+  "/api/v1/evidence/sources/{source_id}/status": {
+    /** Source Status Endpoint */
+    post: operations["source_status_endpoint_api_v1_evidence_sources__source_id__status_post"];
+  };
+  "/api/v1/evidence/search": {
+    /** Search Endpoint */
+    post: operations["search_endpoint_api_v1_evidence_search_post"];
+  };
+  "/api/v1/formulas": {
+    /** List Formulas Endpoint */
+    get: operations["list_formulas_endpoint_api_v1_formulas_get"];
+    /** Register Formula Endpoint */
+    post: operations["register_formula_endpoint_api_v1_formulas_post"];
+  };
+  "/api/v1/formulas/{formula_id}": {
+    /** Get Formula Endpoint */
+    get: operations["get_formula_endpoint_api_v1_formulas__formula_id__get"];
+  };
+  "/api/v1/formulas/{formula_id}/advance": {
+    /** Advance Formula Endpoint */
+    post: operations["advance_formula_endpoint_api_v1_formulas__formula_id__advance_post"];
+  };
+  "/api/v1/calculations": {
+    /** Calc Run Endpoint */
+    post: operations["calc_run_endpoint_api_v1_calculations_post"];
+  };
+  "/api/v1/calculations/verify": {
+    /** Calc Verify Endpoint */
+    post: operations["calc_verify_endpoint_api_v1_calculations_verify_post"];
+  };
+  "/api/v1/calculations/reference-case": {
+    /**
+     * Calc Reference Case Endpoint
+     * @description Run reference case + advance formula to REFERENCE_CASE_TESTED.
+     *
+     * The formula must be at least SOURCE_ATTACHED to be advanced by a reference
+     * case test â running a reference case on a bare DRAFT (no source attached)
+     * is rejected.
+     */
+    post: operations["calc_reference_case_endpoint_api_v1_calculations_reference_case_post"];
+  };
+  "/api/v1/calculations/{run_id}": {
+    /** Calc Run Id Endpoint */
+    get: operations["calc_run_id_endpoint_api_v1_calculations__run_id__get"];
   };
 }
 
@@ -77,10 +180,159 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /**
+     * CalcReferenceCaseRequest
+     * @description Register a reference case outcome on a formula + advance lifecycle.
+     */
+    CalcReferenceCaseRequest: {
+      /** Formula Id */
+      formula_id: string;
+      /**
+       * To Status
+       * @default REFERENCE_CASE_TESTED
+       */
+      to_status?: string;
+      /** Reference Inputs */
+      reference_inputs: {
+        [key: string]: unknown;
+      };
+      /** Expected Result */
+      expected_result: number | string;
+      /**
+       * Tolerance
+       * @default 1e-9
+       */
+      tolerance?: number;
+      /**
+       * Reviewed By
+       * @default user
+       */
+      reviewed_by?: string;
+    };
+    /** CalcRunRequest */
+    CalcRunRequest: {
+      /** Formula Id */
+      formula_id: string;
+      /** Inputs */
+      inputs: {
+        [key: string]: unknown;
+      };
+      /** Task Id */
+      task_id?: string | null;
+      /**
+       * Research
+       * @default false
+       */
+      research?: boolean;
+    };
+    /** CalcVerifyRequest */
+    CalcVerifyRequest: {
+      /** Formula Id */
+      formula_id: string;
+      /** Reference Inputs */
+      reference_inputs: {
+        [key: string]: unknown;
+      };
+      /** Expected Result */
+      expected_result: number | string;
+      /**
+       * Tolerance
+       * @default 1e-9
+       */
+      tolerance?: number;
+    };
+    /**
+     * ExecuteRequest
+     * @description Payload for POST /tasks/{id}/execute.
+     */
+    ExecuteRequest: {
+      /** Action */
+      action: string;
+      /**
+       * Params
+       * @default {}
+       */
+      params?: {
+        [key: string]: unknown;
+      };
+    };
+    /** FormulaAdvanceRequest */
+    FormulaAdvanceRequest: {
+      /** To Status */
+      to_status: string;
+      /**
+       * Reviewed By
+       * @default user
+       */
+      reviewed_by?: string;
+      /**
+       * Reason
+       * @default
+       */
+      reason?: string;
+    };
+    /** FormulaRequest */
+    FormulaRequest: {
+      /** Name */
+      name: string;
+      /** Domain */
+      domain: string;
+      /** Equation Text */
+      equation_text: string;
+      /** Implementation Ref */
+      implementation_ref?: string | null;
+      /** Variables */
+      variables?: {
+          [key: string]: unknown;
+        }[] | null;
+      /** Assumptions */
+      assumptions?: string[] | null;
+      /** Applicability */
+      applicability?: string[] | null;
+      /** Source Refs */
+      source_refs?: string[] | null;
+      /** Source Locations */
+      source_locations?: {
+          [key: string]: unknown;
+        }[] | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
+    };
+    /** IngestSourceRequest */
+    IngestSourceRequest: {
+      /** Title */
+      title: string;
+      /** Source Type */
+      source_type: string;
+      /** Authority Level */
+      authority_level: string;
+      /** Local File Path */
+      local_file_path: string;
+      /** Author */
+      author?: string | null;
+      /** Publisher */
+      publisher?: string | null;
+      /** Edition */
+      edition?: string | null;
+      /** Year */
+      year?: number | null;
+      /** Doi */
+      doi?: string | null;
+      /** Official Url */
+      official_url?: string | null;
+    };
+    /**
+     * InputRequest
+     * @description Payload for POST /tasks/{id}/provide-input.
+     */
+    InputRequest: {
+      /** Inputs */
+      inputs: {
+        [key: string]: unknown;
+      };
     };
     /** Project */
     Project: {
@@ -109,6 +361,28 @@ export interface components {
       name: string;
       /** Description */
       description?: string | null;
+    };
+    /** SearchRequest */
+    SearchRequest: {
+      /** Query */
+      query: string;
+      /** Source Id */
+      source_id?: string | null;
+      /**
+       * Limit
+       * @default 20
+       */
+      limit?: number;
+    };
+    /** SourceStatusRequest */
+    SourceStatusRequest: {
+      /** Status */
+      status: string;
+      /**
+       * Reason
+       * @default
+       */
+      reason?: string;
     };
     /** Task */
     Task: {
@@ -184,6 +458,24 @@ export interface components {
       /** Context */
       ctx?: Record<string, never>;
     };
+    /**
+     * VerifyRequest
+     * @description Payload for POST /tasks/{id}/verify.
+     */
+    VerifyRequest: {
+      /** Connector Result */
+      connector_result: {
+        [key: string]: unknown;
+      };
+      /** Software Version */
+      software_version: string;
+      /** Length */
+      length: number;
+      /** Width */
+      width: number;
+      /** Height */
+      height: number;
+    };
   };
   responses: never;
   parameters: never;
@@ -198,6 +490,20 @@ export type external = Record<string, never>;
 
 export interface operations {
 
+  /**
+   * Auth Session
+   * @description Mint a fresh session token cookie (single-user, no password).
+   */
+  auth_session_api_v1_auth_session_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
   /**
    * Health
    * @description Health endpoint: DB reachable + app_state readable.
@@ -247,7 +553,7 @@ export interface operations {
   };
   /**
    * List Project Tasks
-   * @description All tasks under a project, newest first.
+   * @description All tasks under a project, newest first. 404 if project does not exist.
    */
   list_project_tasks_api_v1_projects__project_id__tasks_get: {
     parameters: {
@@ -369,6 +675,152 @@ export interface operations {
       };
     };
   };
+  /**
+   * Verify Task Endpoint
+   * @description Run verification checks against connector result. Task must be in VERIFYING state.
+   */
+  verify_task_endpoint_api_v1_tasks__task_id__verify_post: {
+    parameters: {
+      path: {
+        task_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Task"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Task Endpoint
+   * @description Execute connector action for a RUNNING task, return connector result.
+   *
+   * Security:
+   * - Action must be in the connector allowlist (no arbitrary commands/scripts)
+   * - Params validated: numeric ranges for dimensions, sandbox check for artifact_path
+   * - Policy gate enforced by risk level; L2 requires human approval
+   * - Audit event written for every attempt
+   */
+  execute_task_endpoint_api_v1_tasks__task_id__execute_post: {
+    parameters: {
+      path: {
+        task_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExecuteRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Approve Task Endpoint
+   * @description Approve a task in WAITING_APPROVAL state, transition to QUEUED.
+   */
+  approve_task_endpoint_api_v1_tasks__task_id__approve_post: {
+    parameters: {
+      path: {
+        task_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Task"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Provide Input Endpoint
+   * @description Provide missing inputs for a task in NEEDS_INPUT state, re-enter PLANNING.
+   */
+  provide_input_endpoint_api_v1_tasks__task_id__provide_input_post: {
+    parameters: {
+      path: {
+        task_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InputRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Task"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retry Task Endpoint
+   * @description Retry a failed/needs-review task, create a new child task.
+   */
+  retry_task_endpoint_api_v1_tasks__task_id__retry_post: {
+    parameters: {
+      path: {
+        task_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Task"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Task Events */
   task_events_api_v1_tasks__task_id__events_get: {
     parameters: {
@@ -429,16 +881,327 @@ export interface operations {
   };
   /**
    * Probe Connector
-   * @description Phase 2 mock probe: returns UNKNOWN status + version=None.
-   *
-   * Phase 3+ replaces this body with the real detect/version/COM/file-format
-   * probe. Endpoint path stays stable so the connector-health UI works from
-   * Phase 2 forward.
+   * @description Probe a connector: real detect/version for rhino6, mock for others.
    */
   probe_connector_api_v1_connectors__connector_id__probe_post: {
     parameters: {
       path: {
         connector_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Sources Endpoint */
+  list_sources_endpoint_api_v1_evidence_sources_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
+  /** Ingest Endpoint */
+  ingest_endpoint_api_v1_evidence_sources_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IngestSourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Source Endpoint */
+  get_source_endpoint_api_v1_evidence_sources__source_id__get: {
+    parameters: {
+      path: {
+        source_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Checksum Endpoint */
+  checksum_endpoint_api_v1_evidence_sources__source_id__checksum_post: {
+    parameters: {
+      path: {
+        source_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Source Status Endpoint */
+  source_status_endpoint_api_v1_evidence_sources__source_id__status_post: {
+    parameters: {
+      path: {
+        source_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SourceStatusRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Search Endpoint */
+  search_endpoint_api_v1_evidence_search_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SearchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Formulas Endpoint */
+  list_formulas_endpoint_api_v1_formulas_get: {
+    parameters: {
+      query?: {
+        domain?: string | null;
+        status?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Register Formula Endpoint */
+  register_formula_endpoint_api_v1_formulas_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FormulaRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Formula Endpoint */
+  get_formula_endpoint_api_v1_formulas__formula_id__get: {
+    parameters: {
+      path: {
+        formula_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Advance Formula Endpoint */
+  advance_formula_endpoint_api_v1_formulas__formula_id__advance_post: {
+    parameters: {
+      path: {
+        formula_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FormulaAdvanceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Calc Run Endpoint */
+  calc_run_endpoint_api_v1_calculations_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcRunRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Calc Verify Endpoint */
+  calc_verify_endpoint_api_v1_calculations_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Calc Reference Case Endpoint
+   * @description Run reference case + advance formula to REFERENCE_CASE_TESTED.
+   *
+   * The formula must be at least SOURCE_ATTACHED to be advanced by a reference
+   * case test â running a reference case on a bare DRAFT (no source attached)
+   * is rejected.
+   */
+  calc_reference_case_endpoint_api_v1_calculations_reference_case_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcReferenceCaseRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Calc Run Id Endpoint */
+  calc_run_id_endpoint_api_v1_calculations__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
       };
     };
     responses: {
