@@ -132,6 +132,8 @@ async def task_events_raw(task_id: str):
         rows = await db.execute_fetchall(
             "SELECT from_state, to_state, event, metadata_json, timestamp FROM task_events WHERE task_id = ? ORDER BY timestamp ASC",
             (task_id,))
+    if not rows:
+        raise HTTPException(status_code=404, detail="Task not found")
     return [{
         "from_state": r[0], "to_state": r[1], "event": r[2],
         "metadata": json.loads(r[3]) if r[3] else None, "timestamp": r[4]

@@ -19,6 +19,10 @@ from nei.core.database import init_db, DB_PATH
 def test_phase1_acceptance():
     if DB_PATH.exists():
         DB_PATH.unlink()
+    for suffix in ("-wal", "-shm"):
+        p = DB_PATH.with_name(DB_PATH.name + suffix)
+        if p.exists():
+            p.unlink()
     asyncio.run(init_db())
     client = TestClient(app)
 
