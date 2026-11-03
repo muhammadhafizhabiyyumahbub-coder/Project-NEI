@@ -1,7 +1,31 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getHealth, listProjects, createProject, listProjectTasks, createTask, getTask, cancelTask, getTaskEvents, listConnectors, probeConnector, sseUrl } from "../api/client";
+import {
+  getHealth,
+  listProjects,
+  createProject,
+  listProjectTasks,
+  createTask,
+  getTask,
+  cancelTask,
+  getTaskEvents,
+  listConnectors,
+  probeConnector,
+  sseUrl,
+  listEvidenceSources,
+  searchEvidence,
+  listFormulas,
+  runCalculation,
+} from "../api/client";
+import type {
+  Project,
+  Connector,
+  EvidenceSource,
+  EvidenceSearchResult,
+  Formula,
+  CalcRun,
+} from "../api/client";
 
 // Global state
 const AppContext = createContext<{
@@ -12,10 +36,15 @@ const AppContext = createContext<{
   } | null;
   projects: Project[];
   connectors: Connector[];
+  evidenceSources: EvidenceSource[];
+  formulas: Formula[];
   refreshHealth: () => void;
   refreshProjects: () => void;
   refreshConnectors: () => void;
+  refreshEvidenceSources: () => void;
+  refreshFormulas: () => void;
 }>(null!);
+
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [health, setHealth] = useState<{
@@ -25,6 +54,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [connectors, setConnectors] = useState<Connector[]>([]);
+  const [evidenceSources, setEvidenceSources] = useState<EvidenceSource[]>([]);
+  const [formulas, setFormulas] = useState<Formula[]>([]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -48,6 +79,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     queryKey: ["connectors"],
     queryFn: listConnectors,
     onSuccess: (data) => setConnectors(data),
+  });
+
+  // Evidence sources
+  const { refetch: refreshEvidenceSources } = useQuery({
+    queryKey: ["evidence-sources"],
+    queryFn: listEvidenceSources,
+    onSuccess: (data) => setEvidenceSources(data),
+  });
+
+  // Formulas
+  const { refetch: refreshFormulas } = useQuery({
+    queryKey: ["formulas"],
+    queryFn: listFormulas,
+    onSuccess: (data) => setFormulas(data),
   });
 
   // Create project mutation
@@ -84,9 +129,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => refreshConnectors(),
   });
 
+  // Search evidence mutation
+  const searchEvidenceMutation = useMutation({
+    mutationFn: ({ query, sourceId }: { query: string; sourceId?: string }) =>
+      searchEvidence(query, sourceId),
+  });
+
+  // Run calculation mutation
+  const runCalculationMutation = useMutation({
+    mutationFn: runCalculation,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["calc-runs"] }),
+  });
+
   return (
     <AppContext.Provider
-      value={{ health, projects, connectors, refreshHealth, refreshProjects, refreshConnectors }}
+      value={{ health, projects, connectors, evidenceSources, formulas, refreshHealth, refreshProjects, refreshConnectors, refreshEvidenceSources, refreshFormulas }}
     >
       {children}
     </AppContext.Provider>

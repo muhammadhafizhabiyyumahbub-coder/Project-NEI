@@ -7,6 +7,8 @@ from typing import Optional, List, Dict, Any
 from nei.core.state_machine import TaskStatus, TaskStateTransition
 from nei.core.database import get_db
 from nei.core.audit import log_event
+from nei.verification.engine import VerificationEngine
+from nei.verification.postconditions import PostCondition
 
 
 def _now() -> str:
@@ -95,6 +97,39 @@ async def transition_task(task_id: str, event: str, to_status: TaskStatus,
     except Exception:
         pass
     return await get_task(task_id)
+
+
+async def verify_task(task_id: str, connector_result: dict, software_version: str,
+                      postconditions: Optional[List] = None) -> dict:
+    """Run verification checks against connector result, transition to COMPLETED/NEEDS_REVIEW."""
+    task = await get_task(task_id)
+    if not task:
+        raise ValueError(f"Task {task_id} not found")
+    if postconditions is None:
+        raise ValueError("postconditions required for verification")
+
+    engine = VerificationEngine()
+    record = await engine.run(
+        task_id=task_id,
+        postconditions=postconditions,
+        connector_result=connector_result,
+        software_version=software_version,
+    )
+
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE tasks SET verification_json = ? WHERE id = ?",
+            (json.dumps(record.to_dict()), task_id),
+        )
+        await db.commit()
+
+    status = {
+        "PASSED": TaskStatus.COMPLETED,
+        "FAILED": TaskStatus.NEEDS_REVIEW,
+        "INCOMPLETE": TaskStatus.NEEDS_REVIEW,
+    }[record.status]
+    return await transition_task(task_id, "verification_complete", status,
+                                 {"result": record.status})
 
 
 async def cancel_task(task_id: str) -> dict | None:

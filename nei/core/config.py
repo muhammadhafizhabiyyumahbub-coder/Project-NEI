@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     
     # Artifacts
     artifacts_path: Path = Path("data/artifacts")
+    
+    # Rhino 6
+    rhino_exe_path: str = r"D:\Rhino 6\System\Rhino.exe"
 
 
 settings = Settings()

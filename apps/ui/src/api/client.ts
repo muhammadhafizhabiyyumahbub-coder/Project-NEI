@@ -1,18 +1,47 @@
-// NEI frontend API client — all types come from openapi-generated src/api/types.ts.
+// NEI frontend API client.
 //
-// Regenerate types (run from repo root):
-//   1. start uvicorn on :8000
-//   2. curl -s http://localhost:8000/openapi.json > apps/ui/openapi.json
-//   3. cd apps/ui && npx openapi-typescript openapi.json src/api/types.ts
+// Types are hand-written minimal interfaces here. When OpenAPI generation is
+// wired (see repo root: curl /openapi.json + npx openapi-typescript), replace
+// these with generated types in src/api/types.ts.
 
-import type {
-  components,
-} from "./types";
+const BASE = import.meta.env.VITE_NEI_API ?? "http://localhost:8000/api/v1";
 
-export type Project = components["schemas"]["Project"];
-export type Task = components["schemas"]["Task"];
-export type TaskCreate = components["schemas"]["TaskCreate"];
-export type ProjectCreate = components["schemas"]["ProjectCreate"];
+// ── Types ──────────────────────────────────────────────────────────────────
+export type Project = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  path_root: string;
+};
+
+export type ProjectCreate = { name: string; description?: string | null };
+
+export type Task = {
+  id: string;
+  project_id: string;
+  parent_task_id: string | null;
+  user_request: string;
+  task_type: string;
+  domain: string;
+  risk_level: string;
+  state: string;
+  plan_json: string | null;
+  verification_json: string | null;
+  errors_json: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export type TaskCreate = {
+  user_request: string;
+  task_type?: string;
+  domain?: string;
+  risk_level?: string;
+};
+
 export type TaskEvent = {
   from_state: string | null;
   to_state: string;
@@ -21,8 +50,62 @@ export type TaskEvent = {
   timestamp: string;
 };
 
-const BASE = import.meta.env.VITE_NEI_API ?? "http://localhost:8000/api/v1";
+export type Connector = { id: string; name: string; transport: string };
 
+export type ProbeResult = {
+  connector_id: string;
+  detected: string | null;
+  version: string | null;
+  bitness: string | null;
+  probe_ts: string;
+  note: string;
+};
+
+export type EvidenceSource = {
+  id: string;
+  title: string;
+  source_type: string;
+  authority_level: string;
+  local_file_path: string;
+  checksum_sha256: string;
+  ingested_at: string;
+  verification_status: string;
+};
+
+export type EvidenceSearchResult = {
+  chunk_id: string;
+  page: number | null;
+  section: string | null;
+  clause: string | null;
+  equation_no: string | null;
+  text: string;
+  source_id: string;
+  source_title: string;
+  verification_status: string;
+};
+
+export type Formula = {
+  id: string;
+  name: string;
+  domain: string;
+  equation_text: string;
+  review_status: string;
+  version: number;
+  created_at: string;
+};
+
+export type CalcRun = {
+  id: string;
+  formula_id: string;
+  formula_name: string;
+  inputs: Record<string, unknown>;
+  result: unknown;
+  evidence_status: string;
+  run_id: string;
+  created_at: string;
+};
+
+// ── http helper ─────────────────────────────────────────────────────────────
 async function http<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...opts?.headers },
@@ -30,7 +113,12 @@ async function http<T>(path: string, opts?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`HTTP ${res.status}: ${body}`);
+    let detail = body;
+    try {
+      const j = JSON.parse(body);
+      detail = j.detail ?? j.message ?? body;
+    } catch { /* keep raw */ }
+    throw new Error(`HTTP ${res.status}: ${detail}`);
   }
   return res.json() as Promise<T>;
 }
@@ -46,18 +134,12 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 export async function createProject(payload: ProjectCreate): Promise<Project> {
-  return http("/projects", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return http("/projects", { method: "POST", body: JSON.stringify(payload) });
 }
 
-// ── tasks ────────────────────────────────────────────────────────────────────
+// ── tasks ──────────────────────────────────────────────────────────────────
 export async function createTask(projectId: string, payload: TaskCreate): Promise<Task> {
-  return http(`/projects/${projectId}/tasks`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return http(`/projects/${projectId}/tasks`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function listProjectTasks(projectId: string): Promise<Task[]> {
@@ -76,22 +158,7 @@ export async function getTaskEvents(taskId: string): Promise<TaskEvent[]> {
   return http(`/tasks/${taskId}/events_raw`);
 }
 
-// ── connectors ───────────────────────────────────────────────────────────────
-export type Connector = {
-  id: string;
-  name: string;
-  transport: string;
-};
-
-export type ProbeResult = {
-  connector_id: string;
-  detected: string | null;
-  version: string | null;
-  bitness: string | null;
-  probe_ts: string;
-  note: string;
-};
-
+// ── connectors ──────────────────────────────────────────────────────────────
 export async function listConnectors(): Promise<Connector[]> {
   return http("/connectors");
 }
@@ -100,7 +167,49 @@ export async function probeConnector(id: string): Promise<ProbeResult> {
   return http(`/connectors/${id}/probe`, { method: "POST" });
 }
 
+// ── evidence (Phase 4) ──────────────────────────────────────────────────────
+export async function listEvidenceSources(): Promise<EvidenceSource[]> {
+  return http("/evidence/sources");
+}
+
+export async function getEvidenceSource(id: string): Promise<EvidenceSource> {
+  return http(`/evidence/sources/${id}`);
+}
+
+export async function searchEvidence(query: string, sourceId?: string, limit = 20) {
+  return http<EvidenceSearchResult[]>("/evidence/search", {
+    method: "POST",
+    body: JSON.stringify({ query, source_id: sourceId ?? null, limit }),
+  });
+}
+
+// ── formulas + calculations (Phase 5) ─────────────────────────────────────
+export async function listFormulas(domain?: string, status?: string): Promise<Formula[]> {
+  const q = new URLSearchParams();
+  if (domain) q.set("domain", domain);
+  if (status) q.set("status", status);
+  const qs = q.toString();
+  return http(`/formulas${qs ? `?${qs}` : ""}`);
+}
+
+export async function getFormula(id: string): Promise<Formula & Record<string, unknown>> {
+  return http(`/formulas/${id}`);
+}
+
+export async function runCalculation(body: {
+  formula_id: string;
+  inputs: Record<string, unknown>;
+  task_id?: string | null;
+  research?: boolean;
+}): Promise<CalcRun> {
+  return http("/calculations", { method: "POST", body: JSON.stringify(body) });
+}
+
 // ── SSE helper ───────────────────────────────────────────────────────────────
 export function sseUrl(taskId: string): string {
   return `${BASE}/tasks/${taskId}/events`;
+}
+
+export function sseTaskEvents(taskId: string): string {
+  return `${BASE}/events?task_id=${encodeURIComponent(taskId)}`;
 }

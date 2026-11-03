@@ -33,3 +33,18 @@ class Task(TaskCreate):
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+
+
+class VerifyRequest(BaseModel):
+    """Payload for POST /tasks/{id}/verify."""
+    connector_result: dict[str, Any]
+    software_version: str
+    length: float
+    width: float
+    height: float
+
+
+class ExecuteRequest(BaseModel):
+    """Payload for POST /tasks/{id}/execute."""
+    action: str
+    params: dict[str, Any] = {}

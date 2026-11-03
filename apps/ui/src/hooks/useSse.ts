@@ -1,45 +1,49 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getTaskEvents } from "../api/client";
+import { useEffect, useRef, useState } from "react";
+import { getTask } from "../api/client";
+import { sseUrl } from "../api/client";
+import type { Task, TaskEvent } from "../api/client";
 
-// SSE subscription with reconnect
-// Returns events as they arrive
-// Automatically reconnects with exponential backoff
-// Returns null when taskId changes
+// Live task events via SSE with exponential-backoff reconnect.
+// Also refetches the task record when a state event arrives.
 
-export function useSse(taskId: string): {
-  events: TaskEvent[];
-  error: Error | null;
-} {
+export function useSse(taskId: string | undefined) {
   const [events, setEvents] = useState<TaskEvent[]>([]);
+  const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!taskId) return;
+    setEvents([]);
+    setTask(null);
+    setError(null);
 
     let retryDelay = 1000;
-    let eventSource: EventSource | null = null;
-    let isActive = true;
+    let active = true;
 
     const connect = () => {
-      eventSource = new EventSource(sseUrl(taskId));
-      retryDelay = 1000;
+      const es = new EventSource(sseUrl(taskId));
+      esRef.current = es;
 
-      eventSource.onmessage = (e) => {
+      es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           setEvents((prev) => [...prev, data]);
+          if (data.event === "snapshot") {
+            setTask(data.data);
+          }
+          // Any state change triggers a task refresh
+          if (data.event === "state") {
+            getTask(taskId).then(setTask).catch(() => {});
+          }
         } catch (err) {
           setError(err instanceof Error ? err : new Error(String(err)));
         }
       };
 
-      eventSource.onerror = () => {
-        if (eventSource) {
-          eventSource.close();
-          eventSource = null;
-        }
-        if (isActive) {
+      es.onerror = () => {
+        es.close();
+        if (active) {
           setTimeout(connect, retryDelay);
           retryDelay = Math.min(retryDelay * 2, 30000);
         }
@@ -49,12 +53,10 @@ export function useSse(taskId: string): {
     connect();
 
     return () => {
-      isActive = false;
-      if (eventSource) {
-        eventSource.close();
-      }
+      active = false;
+      esRef.current?.close();
     };
   }, [taskId]);
 
-  return { events, error };
+  return { events, task, error };
 }

@@ -40,6 +40,10 @@ app.add_middleware(
 app.include_router(routes.router, prefix="/api/v1")
 app.include_router(sse.router, prefix="/api/v1")
 app.include_router(connectors_api.router, prefix="/api/v1")
+from nei.api import evidence_routes
+app.include_router(evidence_routes.router, prefix="/api/v1")
+from nei.api import engineering_routes
+app.include_router(engineering_routes.router, prefix="/api/v1")
 
 if settings.static_build_path.exists():
     app.mount("/", StaticFiles(html=True, directory=str(settings.static_build_path)), name="static")

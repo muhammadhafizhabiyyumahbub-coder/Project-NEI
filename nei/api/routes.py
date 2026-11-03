@@ -144,3 +144,56 @@ async def cancel_task_endpoint(task_id: str):
     if not cancelled:
         raise HTTPException(status_code=404, detail="Task not found")
     return cancelled
+
+
+@router.post("/tasks/{task_id}/verify", response_model=models.Task)
+async def verify_task_endpoint(task_id: str, body: models.VerifyRequest):
+    """Run verification checks against connector result. Task must be in VERIFYING state."""
+    from nei.core.task_manager import verify_task
+    from nei.verification.postconditions import rhino_box_postconditions
+    try:
+        return await verify_task(
+            task_id,
+            body.connector_result,
+            body.software_version,
+            postconditions=rhino_box_postconditions(body.length, body.width, body.height),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/tasks/{task_id}/execute")
+async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
+    """Execute connector action for a RUNNING task, return connector result."""
+    import json as _json
+    from nei.connectors.rhino6 import Rhino6Connector
+    from nei.core.task_manager import get_task
+    from nei.core.state_machine import TaskStatus
+
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if TaskStatus(task["state"]) != TaskStatus.RUNNING:
+        raise HTTPException(status_code=400, detail=f"Task must be in RUNNING state, got {task['state']}")
+
+    connector = Rhino6Connector()
+    result = connector.execute(body.action, body.params, timeout_s=60)
+
+    from nei.core.database import get_db
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
+            (
+                _json.dumps({"action": body.action, "params": body.params, "result": result.__dict__}),
+                _json.dumps({"rhino6": connector.get_version() or "unknown"}),
+                task_id,
+            ),
+        )
+        await db.commit()
+
+    return {
+        "success": result.success,
+        "object_ids": result.object_ids,
+        "data": result.data,
+        "error": result.error,
+    }
