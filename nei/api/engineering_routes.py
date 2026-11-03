@@ -70,7 +70,12 @@ async def calc_verify_endpoint(body: CalcVerifyRequest):
 
 @router.post("/calculations/reference-case")
 async def calc_reference_case_endpoint(body: CalcReferenceCaseRequest):
-    """Run reference case + advance formula to REFERENCE_CASE_TESTED."""
+    """Run reference case + advance formula to REFERENCE_CASE_TESTED.
+
+    The formula must be at least SOURCE_ATTACHED to be advanced by a reference
+    case test — running a reference case on a bare DRAFT (no source attached)
+    is rejected.
+    """
     from nei.evidence.engine import advance_formula
     vr = await verify_reference_case(
         body.formula_id, body.reference_inputs, body.expected_result,

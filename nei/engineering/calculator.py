@@ -82,15 +82,24 @@ def run_formula(
     task_id: Optional[str] = None,
     research: bool = False,
 ) -> dict:
-    """Run a registered formula. Returns result record with evidence_status.
+    """Run a registered formula (sync wrapper).
 
     - Production (research=False): only APPROVED_FOR_USE formulas allowed.
     - Sandbox (research=True): any formula allowed, but result is UNVERIFIED.
+    Must be called from a non-async context. Raises RuntimeError if an event
+    loop is already running in the current thread.
     """
-    async def _run():
-        return await _run_formula_async(formula_id, inputs, task_id, research)
     import asyncio
-    return asyncio.run(_run())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop is not None:
+        raise RuntimeError(
+            "run_formula (sync) cannot be called inside a running event loop; "
+            "use _run_formula_async directly"
+        )
+    return asyncio.run(_run_formula_async(formula_id, inputs, task_id, research))
 
 
 async def _run_formula_async(formula_id: str, inputs: dict,
