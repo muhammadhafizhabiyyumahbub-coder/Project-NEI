@@ -55,3 +55,8 @@ class ExecuteRequest(BaseModel):
     """Payload for POST /tasks/{id}/execute."""
     action: str
     params: dict[str, Any] = {}
+
+
+class InputRequest(BaseModel):
+    """Payload for POST /tasks/{id}/provide-input."""
+    inputs: dict[str, Any]

@@ -243,3 +243,78 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
         "data": result.data,
         "error": result.error,
     }
+
+
+@router.post("/tasks/{task_id}/approve", response_model=models.Task)
+async def approve_task_endpoint(task_id: str):
+    """Approve a task in WAITING_APPROVAL state, transition to QUEUED."""
+    from nei.core.task_manager import transition_task
+    from nei.core.state_machine import TaskStatus
+    from nei.core.audit import log_event
+    from nei.core.database import get_db
+
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if TaskStatus(task["state"]) != TaskStatus.WAITING_APPROVAL:
+        raise HTTPException(status_code=400, detail=f"Task must be in WAITING_APPROVAL state, got {task['state']}")
+
+    approved = await transition_task(task_id, "human_approved", TaskStatus.QUEUED)
+    async with get_db() as db:
+        await log_event(db, task_id=task_id, event_type="TASK_APPROVED",
+                        detail_json={"risk_level": task["risk_level"]})
+        await db.commit()
+    return approved
+
+
+@router.post("/tasks/{task_id}/provide-input", response_model=models.Task)
+async def provide_input_endpoint(task_id: str, body: models.InputRequest):
+    """Provide missing inputs for a task in NEEDS_INPUT state, re-enter PLANNING."""
+    from nei.core.task_manager import transition_task
+    from nei.core.state_machine import TaskStatus
+    from nei.core.audit import log_event
+    from nei.core.database import get_db
+    import json
+
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if TaskStatus(task["state"]) != TaskStatus.NEEDS_INPUT:
+        raise HTTPException(status_code=400, detail=f"Task must be in NEEDS_INPUT state, got {task['state']}")
+
+    # Store inputs in task metadata
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE tasks SET plan_json = ? WHERE id = ?",
+            (json.dumps(body.inputs), task_id),
+        )
+        await db.commit()
+
+    updated = await transition_task(task_id, "input_provided", TaskStatus.PLANNING)
+    async with get_db() as db:
+        await log_event(db, task_id=task_id, event_type="INPUT_PROVIDED",
+                        detail_json=body.inputs)
+        await db.commit()
+    return updated
+
+
+@router.post("/tasks/{task_id}/retry", response_model=models.Task)
+async def retry_task_endpoint(task_id: str):
+    """Retry a failed/needs-review task, create a new child task."""
+    from nei.core.task_manager import retry_task
+    from nei.core.state_machine import TaskStatus
+    from nei.core.audit import log_event
+    from nei.core.database import get_db
+
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if TaskStatus(task["state"]) not in (TaskStatus.FAILED, TaskStatus.NEEDS_REVIEW):
+        raise HTTPException(status_code=400, detail=f"Task must be in FAILED or NEEDS_REVIEW state, got {task['state']}")
+
+    retried = await retry_task(task_id)
+    async with get_db() as db:
+        await log_event(db, task_id=task_id, event_type="TASK_RETRIED",
+                        detail_json={"retry_task_id": retried["id"]})
+        await db.commit()
+    return retried
