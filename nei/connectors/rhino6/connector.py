@@ -39,6 +39,40 @@ def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _exe_version(path: str) -> Optional[str]:
+    """Read ProductVersion from a Windows exe's version resource (no launch)."""
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             f"(Get-Item -LiteralPath '{path}').VersionInfo.ProductVersion"],
+            capture_output=True, text=True, timeout=15,
+        )
+        return r.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _check_number(value: any, name: str) -> float:
+    """Validate a numeric parameter; raise ValueError on bad input."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a number, got {value!r}")
+    value = float(value)
+    if not (0 < value < 1e6):
+        raise ValueError(f"{name} must be in (0, 1e6), got {value}")
+    return value
+
+
+def _check_path(value: any, name: str) -> str:
+    """Validate a file path parameter is a string, reject non-strings."""
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string, got {value!r}")
+    if not value:
+        return ""
+    if not value.strip():
+        raise ValueError(f"{name} must not be blank, got {value!r}")
+    return value
+
+
 # ── Allowlisted Rhino Python 2.7 script templates ────────────────────────────
 
 # Script to create a box and inspect its bounding box, output JSON result.
@@ -211,6 +245,11 @@ class Rhino6Connector(BaseConnector):
                 data = json.loads(ver_file.read_text(encoding="utf-8"))
                 self._version = str(data.get("version", "unknown"))
                 return self._version
+            # Fallback: read ProductVersion from the exe itself
+            ver = _exe_version(str(exe))
+            if ver:
+                self._version = ver
+                return ver
             return "unknown"
         except Exception:
             return None
@@ -236,14 +275,20 @@ class Rhino6Connector(BaseConnector):
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:
         """Dispatch allowlisted actions. Only known actions are accepted."""
         if action == "rhino.create_box_test":
+            params = parameters or {}
+            for dim in ("length", "width", "height"):
+                if dim in params:
+                    _check_number(params[dim], dim)
             return self._create_box(
-                length=parameters.get("length", 10.0),
-                width=parameters.get("width", 3.0),
-                height=parameters.get("height", 1.0),
-                artifact_path=parameters.get("artifact_path", ""),
+                length=_check_number(params.get("length", 10.0), "length"),
+                width=_check_number(params.get("width", 3.0), "width"),
+                height=_check_number(params.get("height", 1.0), "height"),
+                artifact_path=params.get("artifact_path", ""),
             )
         elif action == "rhino.inspect_objects":
             object_ids = parameters.get("object_ids", [])
+            if object_ids and not all(isinstance(i, str) for i in object_ids):
+                return ToolResult(success=False, error="object_ids must be a list of strings")
             return self._inspect_objects(object_ids)
         elif action == "rhino.get_document_info":
             return self._document_info()
@@ -274,6 +319,9 @@ class Rhino6Connector(BaseConnector):
         # Temp result file (read by script, consumed by backend)
         tmp = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_result.json"
         tmp.unlink(missing_ok=True)
+
+        # Validate artifact path (sandbox-checked by the API layer)
+        artifact_path = _check_path(artifact_path, "artifact_path")
 
         script_content = _render_box_script(
             l=length, w=width, h=height,
@@ -378,15 +426,15 @@ def main():
         ]
 
         try:
-            proc = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout_s,
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             )
-            if proc.returncode != 0:
-                # Rhino headless may return non-zero even on success;
-                # check if result file was written regardless.
-                pass
-        except subprocess.TimeoutExpired:
-            return None
+            try:
+                proc.communicate(timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                return None
         except Exception:
             return None
 
