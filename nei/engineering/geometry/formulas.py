@@ -1,7 +1,5 @@
 """Geometry formulas — deterministic, unit-safe, reference-case tested."""
 
-from nei.engineering.units.framework import parse_quantity
-
 
 def box_volume(length: float, width: float, height: float) -> float:
     """Volume of a rectangular box in m^3. Inputs must be SI (meters)."""

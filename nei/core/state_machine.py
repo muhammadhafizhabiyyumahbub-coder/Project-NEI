@@ -3,8 +3,6 @@
 Implements the transition table from STATE_MACHINE_SPEC.md.
 """
 from enum import Enum
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
 
 
 class TaskStatus(Enum):

@@ -3,9 +3,8 @@
 Alpha 0.1 (Phase 1-3): L0/L1 auto-approved; L2 requires human approval (WAITING_APPROVAL);
 L3 disallowed entirely.
 """
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 import os
-from typing import Set
 
 ALLOWED_RISK = {"L0", "L1"}
 REQUIRES_APPROVAL = {"L2"}

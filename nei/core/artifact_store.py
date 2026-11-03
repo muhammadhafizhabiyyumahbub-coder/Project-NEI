@@ -21,12 +21,14 @@ def _sha256(data: bytes) -> str:
 def _safe_path(task_id: str, filename: str) -> Path:
     """Task-specific sandbox under data/artifacts/<task_id>/<filename>.
 
-    Rejects path traversal in task_id or filename.
+    Defense-in-depth: even if _sanitize_name is bypassed, the resolved path
+    must stay inside ARTIFACTS_ROOT.
     """
     base = (ARTIFACTS_ROOT / task_id / filename).resolve()
     root = ARTIFACTS_ROOT.resolve()
-    # Both task_id and filename must stay inside ARTIFACTS_ROOT
-    if root not in base.parents and base.parent != root:
+    try:
+        base.relative_to(root)
+    except ValueError:
         raise ValueError(f"Path traversal rejected: {filename!r}")
     return base
 
