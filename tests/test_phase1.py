@@ -58,10 +58,35 @@ def test_policy_l3_forbidden():
     assert not risk_forbidden("L2")
 
 
-def test_sandbox_path():
-    root = "D:/Project NEI/data/projects/test"
+def test_sandbox_path(tmp_path):
+    root = str(tmp_path / "sandbox")
+    Path(root).mkdir(parents=True, exist_ok=True)
     assert validate_sandbox_path(f"{root}/artifacts/box.3dm", root)
+    assert validate_sandbox_path("artifacts/box.3dm", root)
     assert not validate_sandbox_path("C:/Windows/System32", root)
+    # Path traversal tests
+    assert not validate_sandbox_path(f"{root}/../outside", root)
+    assert not validate_sandbox_path(f"{root}/artifacts/../../etc/passwd", root)
+    assert not validate_sandbox_path("..\\outside", root)
+    assert not validate_sandbox_path(r"\\evil-server\share\file", root)
+    # Trailing separator on Windows
+    assert validate_sandbox_path(f"{root}/artifacts/box.3dm\\", root)
+    # Invalid root must be rejected
+    assert not validate_sandbox_path("artifacts/box.3dm", str(tmp_path / "missing-root"))
+
+
+def test_sandbox_path_case_insensitive(tmp_path):
+    root = str(tmp_path / "ProjectNEI")
+    Path(root).mkdir(parents=True, exist_ok=True)
+    upper = root.upper()
+    assert validate_sandbox_path(f"{upper}/artifacts/box.3dm", root)
+
+
+def test_sandbox_path_different_drive(tmp_path):
+    root = str(tmp_path)
+    other = "Z:/definitely/not/here/file.txt"
+    if Path(root).drive.lower() != Path(other).drive.lower():
+        assert not validate_sandbox_path(other, root)
 
 
 @pytest.mark.asyncio
