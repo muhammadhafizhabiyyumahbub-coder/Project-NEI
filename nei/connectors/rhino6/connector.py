@@ -80,6 +80,7 @@ def _check_path(value: any, name: str) -> str:
 BOX_SCRIPT_TEMPLATE = '''\
 import rhinoscriptsyntax as rs
 import Rhino
+import Rhino.Geometry as rg
 import json
 
 def main():
@@ -97,8 +98,10 @@ def main():
     # Create box: L x W x H
     l, w, h = {L}, {W}, {H}
     corners = [
-        (0, 0, 0), (l, 0, 0), (l, w, 0), (0, w, 0),
-        (0, 0, h), (l, 0, h), (l, w, h), (0, w, h),
+        rg.Point3d(0, 0, 0), rg.Point3d(l, 0, 0),
+        rg.Point3d(l, w, 0), rg.Point3d(0, w, 0),
+        rg.Point3d(0, 0, h), rg.Point3d(l, 0, h),
+        rg.Point3d(l, w, h), rg.Point3d(0, w, h),
     ]
     box_id = rs.AddBox(corners)
 
@@ -143,6 +146,8 @@ def main():
     if artifact_path:
         os.makedirs(os.path.dirname(artifact_path), exist_ok=True)
         Rhino.RhinoDoc.ActiveDoc.SaveAs(artifact_path, 0)
+
+main()
 '''
 
 # Script to inspect an existing object by ID and document info.
@@ -184,6 +189,8 @@ def main():
 
     with open({RESULT_PATH}, "w") as f:
         json.dump(result, f)
+
+main()
 '''
 
 
@@ -389,6 +396,8 @@ def main():
     }
     with open(RESULT_PATH, "w") as f:
         json.dump(result, f)
+
+main()
 '''.replace("RESULT_PATH", json.dumps(str(tmp)))
         tmp_script = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_docinfo.py"
         tmp_script.write_text(doc_script, encoding="utf-8")
@@ -415,14 +424,18 @@ def main():
         """
         result_path.unlink(missing_ok=True)
 
-        # Run Rhino headless via _RunPythonScript.
-        # Rhino supports: Rhino.exe -1 -r <script>   (headless mode)
-        # Or via Rhino command: _RunPythonScript <script_path>
-        # We use the headless invocation which terminates after script completes.
+        # Run Rhino headless in batch mode via a .rhp macro file.
+        # Rhino.exe -b <macro.rhp> -newdoc
+        # Macro wraps _RunPythonScript + _Exit so Rhino terminates after script completes.
+        macro_path = script_path + ".rhp"
+        Path(macro_path).write_text(
+            f'_RunPythonScript "{script_path}"\n_Exit\n', encoding="utf-8"
+        )
+
         cmd = [
             self._rhino_exe,
-            "-1",          # headless mode (no GUI)
-            "-r", script_path,
+            "-b", macro_path,   # batch mode (headless, no GUI)
+            "-newdoc",         # start from blank document
         ]
 
         try:
@@ -437,6 +450,9 @@ def main():
                 return None
         except Exception:
             return None
+        finally:
+            # Cleanup after Rhino has exited (macro file needed while running)
+            Path(macro_path).unlink(missing_ok=True)
 
         # Read result JSON produced by the script
         if not result_path.exists():

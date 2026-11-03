@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { useApp } from "../hooks/useApp";
-import { useHealth } from "../hooks/useHealth";
-import { useConnectors } from "../hooks/useConnectors";
+import { useState } from "react";
+import { useHealth } from "../../hooks/useHealth";
+import { useConnectors } from "../../hooks/useConnectors";
 import { LayoutDashboard, Folder, Plug, Settings, BookOpen, Calculator } from "lucide-react";
 
 // Sidebar navigation items
@@ -13,9 +13,6 @@ const navItems = [
   { to: "/calculations", icon: Calculator, label: "Calculations" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
-
-// Collapsible sidebar with project name in top bar
-// Shows connector health indicators
 
 export function AppShell() {
   const { health } = useHealth();
@@ -57,11 +54,12 @@ export function AppShell() {
         {/* Top bar */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
+            {health && <span className={`text-sm font-medium ${health.status === "healthy" ? "text-success" : "text-error"}`}>{health.status}</span>}
             {connectors.map((c) => (
               <div
                 key={c.id}
-                className={`w-3 h-3 rounded-full ${c.detected ? "bg-success" : "bg-error"}`}
-                title={`${c.name}: ${c.detected ? "OK" : "Unavailable"}`}
+                className={`w-3 h-3 rounded-full ${c.status === "DETECTED" ? "bg-success" : "bg-error"}`}
+                title={`${c.name}: ${c.status ?? "unknown"}`}
               />
             ))}
           </div>

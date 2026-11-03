@@ -20,7 +20,16 @@ CONNECTORS = [
 @router.get("/connectors")
 async def list_connectors():
     """Static connector registry. Detect/probe fields filled by probe call."""
-    return CONNECTORS
+    rows = {}
+    async with get_db() as db:
+        for r in await db.execute_fetchall("SELECT id, status FROM connectors"):
+            rows[r[0]] = r[1]
+    out = []
+    for c in CONNECTORS:
+        c = {**c}
+        c["status"] = rows.get(c["id"])
+        out.append(c)
+    return out
 
 
 @router.get("/connectors/{connector_id}")

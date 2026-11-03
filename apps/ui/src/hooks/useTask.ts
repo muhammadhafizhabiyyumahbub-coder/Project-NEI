@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTask, getTaskEvents } from "../api/client";
 import { useSse } from "./useSse";

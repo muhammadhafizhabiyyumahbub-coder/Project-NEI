@@ -50,7 +50,7 @@ export type TaskEvent = {
   timestamp: string;
 };
 
-export type Connector = { id: string; name: string; transport: string };
+export type Connector = { id: string; name: string; transport: string; status?: string | null };
 
 export type ProbeResult = {
   connector_id: string;
