@@ -33,31 +33,68 @@ async def get_connector(connector_id: str):
 
 @router.post("/connectors/{connector_id}/probe")
 async def probe_connector(connector_id: str):
-    """Phase 2 mock probe: returns UNKNOWN status + version=None.
+    """Probe a connector: real detect/version for rhino6, mock for others."""
+    from nei.connectors.rhino6 import Rhino6Connector
+    from nei.core.config import settings
 
-    Phase 3+ replaces this body with the real detect/version/COM/file-format
-    probe. Endpoint path stays stable so the connector-health UI works from
-    Phase 2 forward.
-    """
+    if connector_id != "rhino6":
+        # Unknown connector ID — keep mock behavior for non-rhino connectors
+        return await _mock_probe(connector_id)
+
+    conn = Rhino6Connector(rhino_exe=settings.rhino_exe_path)
+    det = conn.detect()
+    version = conn.get_version()
+    ts = datetime.now(timezone.utc).isoformat()
+
+    status = "DETECTED" if det.detected else "NOT_FOUND"
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            "SELECT id FROM connectors WHERE id = ?", (connector_id,))
+        if not rows:
+            await db.execute(
+                "INSERT INTO connectors (id, name, status, last_probe_ts, version, exe_path) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (connector_id, "Rhino 6", status, ts, version,
+                 det.exe_path if det.detected else None),
+            )
+        else:
+            await db.execute(
+                "UPDATE connectors SET status = ?, last_probe_ts = ?, version = ?, exe_path = ? WHERE id = ?",
+                (status, ts, version,
+                 det.exe_path if det.detected else None, connector_id),
+            )
+        await db.commit()
+    return {
+        "connector_id": connector_id,
+        "detected": det.detected,
+        "version": version,
+        "exe_path": det.exe_path if det.detected else None,
+        "probe_ts": ts,
+        "note": "Rhino 6 probe (RhinoPython Method 2)." if det.detected else "Rhino 6 not found at configured path.",
+    }
+
+
+async def _mock_probe(connector_id: str) -> dict:
+    """Fallback mock probe for connectors without a real implementation yet."""
+    ts = datetime.now(timezone.utc).isoformat()
     async with get_db() as db:
         rows = await db.execute_fetchall(
             "SELECT id FROM connectors WHERE id = ?", (connector_id,))
         if not rows:
             await db.execute(
                 "INSERT INTO connectors (id, name, status, last_probe_ts) VALUES (?, ?, 'UNKNOWN', ?)",
-                (connector_id, connector_id, datetime.now(timezone.utc).isoformat()),
+                (connector_id, connector_id, ts),
             )
         else:
             await db.execute(
                 "UPDATE connectors SET last_probe_ts = ? WHERE id = ?",
-                (datetime.now(timezone.utc).isoformat(), connector_id),
+                (ts, connector_id),
             )
         await db.commit()
     return {
         "connector_id": connector_id,
-        "detected": None,  # UNKNOWN until real probe in Phase 3+
+        "detected": None,
         "version": None,
-        "bitness": None,
-        "probe_ts": datetime.now(timezone.utc).isoformat(),
+        "probe_ts": ts,
         "note": "Mock probe (Phase 2). Real probe lands in Phase 3+.",
     }

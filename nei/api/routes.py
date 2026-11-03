@@ -203,8 +203,6 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
     risk_level = task["risk_level"]
     if risk_forbidden(risk_level):
         raise HTTPException(status_code=400, detail=f"Risk level {risk_level} is forbidden")
-    if state != TaskStatus.RUNNING:
-        raise HTTPException(status_code=400, detail=f"Task must be in RUNNING state, got {state.value}")
 
     # Validate numeric params for box creation (prevents injection-ish values)
     if body.action == "rhino.create_box_test":
