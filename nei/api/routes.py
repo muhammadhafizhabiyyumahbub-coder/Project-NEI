@@ -93,8 +93,11 @@ async def create_task_endpoint(project_id: str, task: models.TaskCreate):
 
 @router.get("/projects/{project_id}/tasks", response_model=list[models.Task])
 async def list_project_tasks(project_id: str):
-    """All tasks under a project, newest first."""
+    """All tasks under a project, newest first. 404 if project does not exist."""
     async with get_db() as db:
+        rows = await db.execute_fetchall("SELECT id FROM projects WHERE id = ?", (project_id,))
+        if not rows:
+            raise HTTPException(status_code=404, detail="Project not found")
         rows = await db.execute_fetchall(
             "SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at DESC",
             (project_id,))

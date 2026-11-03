@@ -170,6 +170,13 @@ def test_l3_rejected():
                     json={"user_request": "x", "risk_level": "L3"})
     assert r.status_code == 400
 
+def test_list_tasks_missing_project_404():
+    """GET /projects/{id}/tasks on unknown project → 404, not empty list."""
+    _reset()
+    r = TestClient(app).get("/api/v1/projects/does-not-exist/tasks")
+    assert r.status_code == 404
+    assert "not found" in r.json()["detail"].lower()
+
 
 def test_l2_requires_approval():
     _reset()
