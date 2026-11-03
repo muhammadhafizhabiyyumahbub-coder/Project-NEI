@@ -7,7 +7,7 @@ Checks:
 - Writes result to data/environment_solidworks.json
 """
 import json
-import os
+import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -15,6 +15,19 @@ from datetime import datetime, timezone
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _exe_version(path: str) -> str | None:
+    """Read ProductVersion from a Windows exe's version resource."""
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             f"(Get-Item -LiteralPath '{path}').VersionInfo.ProductVersion"],
+            capture_output=True, text=True, timeout=15,
+        )
+        return r.stdout.strip() or None
+    except Exception:
+        return None
 
 
 def detect_solidworks():
@@ -28,6 +41,21 @@ def detect_solidworks():
         "checked_at": _now(),
         "errors": [],
     }
+
+    # Check custom path requested by user
+    custom_paths = [
+        r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe",
+        r"D:\SolidWork\SLDWORKS.exe",
+    ]
+    for path_str in custom_paths:
+        path = Path(path_str)
+        if path.exists():
+            results["detected"] = True
+            results["version"] = _exe_version(str(path))
+            results["exe_path"] = str(path)
+            results["install_dir"] = str(path.parent)
+            print(f"[OK] Found SOLIDWORKS at {path}")
+            return results
 
     # Check registry
     try:
@@ -73,6 +101,7 @@ def detect_solidworks():
             results["detected"] = True
             results["exe_path"] = str(path)
             results["install_dir"] = str(path.parent)
+            results["version"] = _exe_version(str(path))
             print(f"✓ Found SOLIDWORKS at {path}")
             return results
 
