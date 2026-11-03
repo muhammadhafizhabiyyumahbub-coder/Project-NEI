@@ -23,7 +23,10 @@ def subscribe(task_id: str) -> asyncio.Queue:
 
 
 def unsubscribe(task_id: str, q: asyncio.Queue) -> None:
-    _subscribers.get(task_id, []).remove(q)
+    """Remove subscriber; no-op if already gone."""
+    subs = _subscribers.get(task_id)
+    if subs and q in subs:
+        subs.remove(q)
 
 
 @router.get("/tasks/{task_id}/events")

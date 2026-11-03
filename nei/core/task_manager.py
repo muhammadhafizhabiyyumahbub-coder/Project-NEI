@@ -89,7 +89,7 @@ async def transition_task(task_id: str, event: str, to_status: TaskStatus,
         )
         await db.commit()
         await log_event(db, task_id=task_id, event_type=f"TASK_{event.upper()}",
-                        detail_json=json.dumps({"from": current.value, "to": to_status.value}))
+                        detail_json={"from": current.value, "to": to_status.value})
     # Push live update to SSE subscribers
     try:
         from nei.api.sse import publish_event
