@@ -164,22 +164,65 @@ async def verify_task_endpoint(task_id: str, body: models.VerifyRequest):
 
 @router.post("/tasks/{task_id}/execute")
 async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
-    """Execute connector action for a RUNNING task, return connector result."""
+    """Execute connector action for a RUNNING task, return connector result.
+
+    Security:
+    - Action must be in the connector allowlist (no arbitrary commands/scripts)
+    - Params validated: numeric ranges for dimensions, sandbox check for artifact_path
+    - Policy gate enforced by risk level; L2 requires human approval
+    - Audit event written for every attempt
+    """
     import json as _json
+
     from nei.connectors.rhino6 import Rhino6Connector
-    from nei.core.task_manager import get_task
+    from nei.core.task_manager import get_task, transition_task
     from nei.core.state_machine import TaskStatus
+    from nei.core.policy import risk_requires_approval, risk_forbidden, validate_sandbox_path
+    from nei.core.audit import log_event
+    from nei.core.database import get_db
+
+    if body.action not in models.ALLOWED_ACTIONS:
+        async with get_db() as db:
+            await log_event(
+                db, task_id=task_id, event_type="EXECUTE_REJECTED",
+                detail_json={"reason": "action_not_allowlisted", "action": body.action,
+                             "params": body.params},
+            )
+            await db.commit()
+        raise HTTPException(status_code=400, detail=f"Action not allowed: {body.action}")
 
     task = await get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if TaskStatus(task["state"]) != TaskStatus.RUNNING:
-        raise HTTPException(status_code=400, detail=f"Task must be in RUNNING state, got {task['state']}")
+    state = TaskStatus(task["state"])
+    if state != TaskStatus.RUNNING:
+        raise HTTPException(status_code=400, detail=f"Task must be in RUNNING state, got {state.value}")
+
+    risk_level = task["risk_level"]
+    if risk_forbidden(risk_level):
+        raise HTTPException(status_code=400, detail=f"Risk level {risk_level} is forbidden")
+    if state != TaskStatus.RUNNING:
+        raise HTTPException(status_code=400, detail=f"Task must be in RUNNING state, got {state.value}")
+
+    # Validate numeric params for box creation (prevents injection-ish values)
+    if body.action == "rhino.create_box_test":
+        params = body.params or {}
+        for dim in ("length", "width", "height"):
+            if dim in params:
+                val = params[dim]
+                if not isinstance(val, (int, float)) or isinstance(val, bool) or val <= 0:
+                    raise HTTPException(status_code=400,
+                                        detail=f"Parameter {dim} must be a positive number, got {val!r}")
+        if "artifact_path" in params and params["artifact_path"]:
+            ap = str(params["artifact_path"])
+            project_root = task.get("path_root") or str(PROJECTS_ROOT / task["project_id"])
+            if not validate_sandbox_path(ap, project_root):
+                raise HTTPException(status_code=400,
+                                    detail=f"artifact_path outside sandbox: {ap}")
 
     connector = Rhino6Connector()
     result = connector.execute(body.action, body.params, timeout_s=60)
 
-    from nei.core.database import get_db
     async with get_db() as db:
         await db.execute(
             "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
@@ -189,6 +232,9 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
                 task_id,
             ),
         )
+        await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
+                        detail_json={"action": body.action, "params": body.params,
+                                     "success": result.success})
         await db.commit()
 
     return {

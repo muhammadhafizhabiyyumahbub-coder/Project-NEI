@@ -44,6 +44,13 @@ class VerifyRequest(BaseModel):
     height: float
 
 
+ALLOWED_ACTIONS = {
+    "rhino.create_box_test",
+    "rhino.inspect_objects",
+    "rhino.get_document_info",
+}
+
+
 class ExecuteRequest(BaseModel):
     """Payload for POST /tasks/{id}/execute."""
     action: str
