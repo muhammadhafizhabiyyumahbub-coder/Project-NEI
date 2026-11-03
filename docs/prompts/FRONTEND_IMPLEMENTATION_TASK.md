@@ -1,473 +1,149 @@
-# TASK: IMPLEMENT NEI FRONTEND — PHASE 2
+# TASK: IMPLEMENT NEI FRONTEND — PHASE 2 (REVISI)
 
-Kamu bertindak sebagai Senior Frontend Engineer sekaligus UI/UX Designer untuk project **NEI (Nautical Engineering Intelligence)**.
+Kamu bertindak sebagai Senior Frontend Engineer sekaligus UI/UX Designer untuk project NEI (Nautical Engineering Intelligence).
 
-Tugasmu adalah mengimplementasikan frontend NEI secara nyata ke dalam repository yang sudah ada.
+Implementasikan frontend NEI sebagai kode yang dapat dijalankan di repository yang sudah ada. Jangan membuat hanya mockup, screenshot, atau dokumentasi.
 
-Jangan hanya membuat mockup, screenshot, atau dokumentasi. Implementasikan kode yang dapat dijalankan.
+---
 
-## 1. LANGKAH PERTAMA: AUDIT PROJECT
+## 0. ATURAN TAMBAHAN (mengesampingkan bagian lain yang bertentangan)
+
+- **Maxsurf yang terpasang adalah Maxsurf 20 V8i** (versi 20.00.01.59 menurut `environment.json`), bukan "Maxsurf Enterprise v8.1". Gunakan nama dan versi dari data backend jika tersedia; jika tidak, tampilkan "Maxsurf 20 V8i".
+- **FRONTEND_SPEC.md adalah sumber kebenaran design tokens dan perilaku halaman.** Palet di bagian 3 hanyalah usulan awal. Jika berbeda dengan FRONTEND_SPEC.md, laporkan perbedaannya pada akhir Phase A dan tunggu keputusan; jangan memilih diam-diam.
+- **Stack:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Lucide, TanStack Query, React Router. shadcn/ui belum terpasang; pasang secara terkontrol hanya komponen yang dipakai. Periksa apakah `tailwind.config.js` masih relevan karena `package.json` memakai Tailwind v4 lewat `@tailwindcss/vite`; laporkan temuannya.
+- **Tipe API harus berasal dari OpenAPI** (`apps/ui/openapi.json` melalui `generate-types.mjs`), bukan ditulis tangan. Jika tipe hasil generate tidak cocok dengan respons backend aktual, laporkan sebagai ketidaksesuaian; jangan diam-diam diubah.
+- **Versi dependency:** verifikasi dari registry npm atau dokumentasi resmi sebelum menambah atau mengubah versi. Jangan menebak versi.
+- **Dashboard:** backend saat ini hanya punya daftar task per project dan belum tentu punya endpoint ringkasan. **Jangan menghitung Active/Completed/Failed lewat banyak request tersembunyi.** Tampilkan UNAVAILABLE dengan penjelasan, dan catat endpoint yang dibutuhkan di `docs/FRONTEND_API_GAPS.md`.
+- **Backend tidak boleh diubah** di task ini. Semua kebutuhan backend dicatat di `docs/FRONTEND_API_GAPS.md`.
+- Kondisi awal: `apps/ui/src/App.tsx` masih template bawaan Vite. Anggap frontend Phase 2 **belum selesai** meskipun scaffold, hooks, dan API client sudah ada. Jangan menghapus yang berfungsi (hooks, `api/client.ts`) tanpa alasan teknis tertulis.
+- **BERHENTI setelah PHASE A** dan tunggu persetujuan saya sebelum PHASE B.
+
+---
+
+## 1. LANGKAH PERTAMA: AUDIT PROJECT (PHASE A)
 
 Sebelum mengubah kode:
 
-1. Baca `README.md`.
-2. Baca `PLAN.md`.
-3. Baca `ARCHITECTURE.md`.
-4. Baca `FRONTEND_SPEC.md`.
-5. Baca `API_SPEC.md`.
-6. Periksa struktur folder `apps/ui/`.
-7. Periksa seluruh komponen frontend yang sudah tersedia.
-8. Periksa backend API dan endpoint aktual.
-9. Periksa `package.json` dan dependencies yang sudah terpasang.
+1. Baca README.md, PLAN.md, ARCHITECTURE.md, FRONTEND_SPEC.md, API_SPEC.md, IMPLEMENTATION_GUIDE.md.
+2. Periksa `apps/ui/` (struktur, komponen, hooks, API client, package.json, konfigurasi Vite dan Tailwind).
+3. Periksa backend dan endpoint aktual (`nei/api/`, `nei/connectors/`). Jangan mengasumsikan endpoint ada hanya karena tercantum di dokumentasi.
+4. Jalankan `npm ci` (atau `npm install`), TypeScript check, dan build pada kondisi awal. Catat hasilnya apa adanya.
 
 Buat pemetaan singkat:
-- Komponen yang sudah tersedia.
-- Komponen yang perlu dibuat.
-- Endpoint backend yang benar-benar tersedia.
-- Endpoint yang belum tersedia.
-- Ketidaksesuaian antara dokumentasi dan implementasi.
+- Komponen yang sudah ada dan yang perlu dibuat.
+- Endpoint yang benar-benar tersedia dan yang belum.
+- Ketidaksesuaian antara dokumentasi dan implementasi (termasuk palet vs FRONTEND_SPEC, tailwind config, tipe OpenAPI vs respons aktual).
+- Rencana implementasi per fase, dan pertanyaan terbuka.
 
-**Jangan mengasumsikan API tersedia hanya karena tercantum dalam dokumentasi.**
+**STOP. Tunggu persetujuan sebelum PHASE B.**
 
-Jangan menghapus atau mengganti implementasi yang sudah berfungsi tanpa alasan teknis.
+---
 
 ## 2. TUJUAN DESAIN
 
-NEI harus terlihat seperti professional naval engineering workstation, bukan dashboard template biasa.
+NEI harus terlihat seperti professional naval engineering workstation, bukan template dashboard.
 
-Konsep desain:
+- Dark-first, estetika software engineering profesional, modern, minimalis, presisi, informatif.
+- Kepadatan informasi tinggi tetapi mudah dibaca.
+- Aksen biru untuk interaksi utama; warna status konsisten.
+- Sidebar permanen, layout responsif untuk desktop dan laptop (mobile bukan prioritas).
+- Tipografi dan spacing konsisten di semua halaman.
 
-- Dark-first interface.
-- Professional engineering software aesthetic.
-- Modern, minimalis, presisi, dan informatif.
-- High information density tetapi tetap mudah dibaca.
-- Warna aksen biru untuk interaksi utama.
-- Status sistem menggunakan warna yang konsisten.
-- Sidebar permanen.
-- Layout responsif.
-- Typography profesional.
-- Konsistensi desain pada seluruh halaman.
+Hindari: tampilan marketing, gradient berlebihan, terlalu banyak kartu membulat, animasi dekoratif, emoji sebagai icon, dan data statistik palsu yang tampak seperti data aktual.
 
-Inspirasi visual:
-- Professional CAD software.
-- Engineering monitoring workstation.
-- Modern developer tools.
-- Scientific computing dashboards.
-
-Hindari:
-- Tampilan seperti website marketing.
-- Gradient berlebihan.
-- Terlalu banyak rounded cards.
-- Animasi dekoratif yang tidak diperlukan.
-- Emoji sebagai pengganti icon.
-- Data statistik palsu yang terlihat seperti data aktual.
-
-Gunakan Lucide icons jika dependency tersedia atau tambahkan secara terkontrol.
+Gunakan Lucide icons yang sudah terpasang.
 
 ## 3. DESIGN SYSTEM
 
-Buat design system terpusat.
+Buat design system terpusat (tokens), bukan warna acak per komponen. Usulan awal (tunduk pada FRONTEND_SPEC.md):
 
-Contoh palet warna awal:
+- Background: main `#0B1120`, sidebar `#0F172A`, panel `#111C2E`, elevated `#172338`.
+- Border: `#263449`.
+- Teks: primary `#E5EDF7`, secondary `#94A3B8`, muted `#64748B`.
+- Aksen: blue `#3B82F6`, hover `#2563EB`.
+- Status: success `#22C55E`, warning `#F59E0B`, error `#EF4444`, info `#38BDF8`.
 
-Background:
-- Main: #0B1120
-- Sidebar: #0F172A
-- Panel: #111C2E
-- Elevated: #172338
-
-Border:
-- Default: #263449
-
-Text:
-- Primary: #E5EDF7
-- Secondary: #94A3B8
-- Muted: #64748B
-
-Accent:
-- Primary blue: #3B82F6
-- Hover blue: #2563EB
-
-Status:
-- Success: #22C55E
-- Warning: #F59E0B
-- Error: #EF4444
-- Info: #38BDF8
-
-Buat reusable design tokens untuk:
-- Colors.
-- Typography.
-- Spacing.
-- Border radius.
-- Shadows.
-- Component states.
-
-Jangan mendefinisikan warna secara acak di setiap komponen.
+Tokens untuk: warna, tipografi, spacing, radius, shadow, dan state komponen. Pastikan kontras teks memadai (aksesibilitas).
 
 ## 4. APPLICATION LAYOUT
 
-Buat layout utama NEI dengan:
-
-### A. Sidebar
-
-Bagian atas:
-- Logo NEI.
-- Nautical Engineering Intelligence.
-- Status koneksi backend.
-
-Navigasi:
-1. Dashboard
-2. AI Workspace
-3. Projects
-4. Engineering Knowledge
-5. Calculation Center
-6. Software Control
-7. Verification & Reports
-8. Settings
-
-Untuk tahap implementasi ini, prioritaskan halaman:
-- Dashboard.
-- Projects.
-- Connectors.
-- Settings.
-
-Halaman lain boleh dibuat sebagai placeholder yang konsisten dengan design system, tetapi jangan berpura-pura memiliki fungsi yang belum diimplementasikan.
-
-Bagian bawah:
-- Backend status.
-- Application version jika tersedia.
-- User/system status jika tersedia.
-
-### B. Topbar
-
-Isi:
-- Nama halaman.
-- Breadcrumb.
-- Backend connection indicator.
-- Notification indicator jika sistem notifikasi tersedia.
-- Refresh action jika relevan.
-
-### C. Main Content
-
-Gunakan layout yang fleksibel dan konsisten pada seluruh halaman.
-
-## 5. HALAMAN DASHBOARD
-
-Buat dashboard engineering workstation.
-
-Bagian utama:
-
-### System Overview
-Tampilkan:
-- Backend status.
-- Database status jika tersedia.
-- AI provider status jika tersedia.
-- Active tasks.
-- Completed tasks.
-- Failed tasks.
-
-Semua status harus berasal dari API aktual.
-
-Jika data tidak tersedia:
-- Tampilkan `UNKNOWN` atau `UNAVAILABLE`.
-- Jangan membuat angka palsu.
-- Berikan penjelasan bahwa data belum tersedia.
-
-### Recent Tasks
-Tampilkan:
-- Task ID.
-- Task name.
-- Status.
-- Created time.
-- Updated time.
+**Sidebar:** logo NEI dan "Nautical Engineering Intelligence"; indikator koneksi backend; navigasi (Dashboard, AI Workspace, Projects, Engineering Knowledge, Calculation Center, Software Control, Verification & Reports, Settings); di bagian bawah status backend dan versi aplikasi bila tersedia.
 
-Tambahkan:
-- Status badges.
-- Empty state.
-- Loading state.
-- Error state.
+Prioritas implementasi: **Dashboard, Projects, Connectors (Software Control), Settings.** Halaman lain berupa placeholder konsisten yang **jelas menyatakan belum tersedia**, tanpa berpura-pura punya fungsi.
 
-### Engineering Software
-Tampilkan konektor:
-- Rhino 6.
-- SOLIDWORKS 2022.
-- Maxsurf Enterprise v8.1.
-- ANSYS: NOT CONFIGURED / DEFERRED.
-
-Status konektor harus berasal dari backend jika tersedia.
-
-Jangan menampilkan konektor sebagai CONNECTED tanpa bukti dari sistem.
-
-### Recent Activity
-Tampilkan aktivitas terbaru apabila endpoint tersedia.
-
-## 6. HALAMAN PROJECTS
-
-Buat halaman pengelolaan project engineering.
-
-Fitur:
-- Project list.
-- Search.
-- Filter.
-- Sort.
-- Project detail entry.
-- Create project jika backend mendukungnya.
-- Empty state.
-- Loading state.
-- Error state.
-
-Informasi project:
-- Project name.
-- Project ID.
-- Description.
-- Created date.
-- Updated date.
-- Project status jika tersedia.
-
-Jangan menyimpan data permanen hanya di frontend apabila backend belum mendukung penyimpanan tersebut.
-
-## 7. HALAMAN CONNECTORS
-
-Buat halaman Software Control / Connectors.
-
-Tampilkan kartu atau tabel untuk:
-
-1. Rhino 6.
-2. SOLIDWORKS 2022.
-3. Maxsurf Enterprise v8.1.
-4. ANSYS.
-
-Setiap konektor mempunyai:
-- Software name.
-- Version.
-- Connection status.
-- Capability status.
-- Last health check.
-- Available actions.
-- Error information jika tersedia.
-
-Capability status harus mendukung:
-- SUPPORTED.
-- UNSUPPORTED.
-- UNKNOWN.
-- UNAVAILABLE.
-
-Tombol:
-- Detect.
-- Health Check.
-- Inspect Capabilities.
-
-Hanya aktifkan tombol apabila endpoint backend benar-benar tersedia.
-
-Jangan membuat simulasi koneksi software yang terlihat seperti koneksi nyata.
-
-ANSYS tetap deferred dan tidak boleh diimplementasikan sebagai konektor aktif.
-
-## 8. HALAMAN SETTINGS
-
-Buat pengaturan aplikasi:
-
-- Backend connection information.
-- Application information.
-- Theme preference.
-- API configuration display.
-- Local storage information jika tersedia.
-- Version information.
-
-Jangan pernah menampilkan API key, password, token, atau secret dari backend.
-
-Jangan menyimpan secret dalam localStorage.
-
-## 9. FRONTEND ARCHITECTURE
-
-Gunakan struktur yang sesuai dengan repository saat ini.
-
-Jika belum tersedia, struktur yang disarankan:
-
-apps/ui/src/
-├── api/
-│   ├── client.ts
-│   ├── endpoints.ts
-│   └── types.ts
-├── assets/
-├── components/
-│   ├── layout/
-│   ├── navigation/
-│   ├── dashboard/
-│   ├── projects/
-│   ├── connectors/
-│   └── ui/
-├── hooks/
-├── layouts/
-├── pages/
-│   ├── Dashboard.tsx
-│   ├── Projects.tsx
-│   ├── Connectors.tsx
-│   ├── Settings.tsx
-│   └── PlaceholderPage.tsx
-├── routes/
-├── styles/
-├── types/
-├── utils/
-├── App.tsx
-└── main.tsx
-
-Jangan memaksakan struktur ini jika repository sudah memiliki struktur yang lebih baik.
-
-Gunakan:
-- React.
-- TypeScript.
-- Vite.
-- Tailwind CSS jika sudah digunakan.
-- React Router jika diperlukan.
-- TanStack Query jika sudah digunakan.
-- Lucide React untuk icons jika tersedia.
-
-Gunakan reusable components.
-
-Hindari satu file besar yang berisi seluruh halaman.
-
-## 10. API INTEGRATION
-
-Periksa implementasi backend sebelum membuat API client.
-
-Buat satu API client terpusat.
-
-Persyaratan:
-- Base URL melalui konfigurasi environment.
-- Request timeout.
-- Error handling.
-- Response validation jika sesuai.
-- Loading state.
-- Network failure handling.
-- TypeScript types.
-- Tidak ada API request langsung yang tersebar di setiap komponen.
-
-Penting:
-
-Dokumentasi API dan implementasi aktual mungkin berbeda.
-
-Ikuti endpoint aktual yang sudah tersedia. Catat perbedaan dengan dokumentasi, tetapi jangan mengubah backend dalam task ini.
-
-Jangan menggunakan mock data sebagai pengganti backend tanpa penanda yang jelas.
-
-Jika endpoint belum tersedia, tampilkan status `NOT IMPLEMENTED` atau `UNAVAILABLE`.
-
-## 11. UX REQUIREMENTS
-
-Semua halaman harus memiliki:
-
-- Loading state.
-- Empty state.
-- Error state.
-- Responsive layout.
-- Accessible labels.
-- Keyboard navigation.
-- Tooltip pada icon-only buttons.
-- Konsistensi spacing.
-- Konsistensi typography.
-- Feedback saat user melakukan action.
-
-Jangan membuat tombol yang tidak mempunyai fungsi.
-
-Untuk aksi yang belum didukung backend, tampilkan disabled state beserta alasan yang jelas.
-
-## 12. SECURITY
-
-Frontend harus mengikuti prinsip keamanan NEI:
-
-- Local-first.
-- Tidak mengekspos API secrets.
-- Tidak menyimpan password atau token sensitif di browser storage.
-- Tidak menganggap frontend sebagai security boundary.
-- Validasi input di frontend dan tetap mengandalkan validasi backend.
-- Tidak menjalankan arbitrary commands dari browser.
-- Tidak melakukan operasi destruktif terhadap file engineering.
-- Tidak mengirim data ke layanan eksternal tanpa kebutuhan yang jelas.
-
-## 13. TESTING DAN VALIDATION
-
-Setelah implementasi:
-
-1. Jalankan TypeScript check.
-2. Jalankan lint jika tersedia.
-3. Jalankan frontend tests jika tersedia.
-4. Jalankan production build.
-5. Perbaiki error yang muncul.
-6. Periksa seluruh routing.
-7. Periksa tampilan setiap halaman.
-8. Pastikan tidak ada tombol yang menyesatkan.
-9. Pastikan frontend dapat berkomunikasi dengan backend yang tersedia.
-10. Pastikan frontend tetap menampilkan error state ketika backend mati.
+**Topbar:** nama halaman, breadcrumb, indikator koneksi backend, tombol refresh bila relevan, indikator notifikasi hanya jika sistemnya ada.
+
+**Main content:** layout fleksibel dan konsisten.
+
+## 5. DASHBOARD
+
+Semua status harus berasal dari API aktual. Jika data tidak ada, tampilkan UNKNOWN atau UNAVAILABLE beserta alasannya. Jangan membuat angka palsu.
+
+- **System Overview:** status backend (dari `/health`), status database dan AI provider bila tersedia, ringkasan task sesuai aturan di bagian 0.
+- **Recent Tasks:** ID, nama, status, waktu dibuat dan diperbarui; status badge; state loading, empty, dan error. Gunakan hanya endpoint yang benar-benar ada.
+- **Engineering Software:** Rhino 6, SOLIDWORKS 2022, Maxsurf 20 V8i, ANSYS (DEFERRED / NOT CONFIGURED). Jangan tampilkan CONNECTED tanpa bukti dari sistem.
+- **Recent Activity:** hanya bila endpoint tersedia.
+
+## 6. PROJECTS
+
+Daftar project, pencarian, filter, urutan, entri ke detail project, buat project (hanya bila backend mendukung), serta state empty, loading, dan error. Informasi: nama, ID, deskripsi, tanggal dibuat dan diperbarui, status bila tersedia. Jangan menyimpan data permanen hanya di frontend bila backend belum mendukungnya.
+
+## 7. CONNECTORS (SOFTWARE CONTROL)
+
+Kartu atau tabel untuk Rhino 6, SOLIDWORKS 2022, Maxsurf 20 V8i, ANSYS. Tiap konektor menampilkan: nama, versi, status koneksi, status kapabilitas (`SUPPORTED`, `UNSUPPORTED`, `UNKNOWN`, `UNAVAILABLE`), waktu health check terakhir, aksi yang tersedia, dan informasi error bila ada.
+
+Tombol Detect, Health Check, dan Inspect Capabilities hanya aktif jika endpoint backend benar-benar ada; selain itu disabled dengan alasan yang jelas. Jangan membuat simulasi koneksi. ANSYS tetap deferred dan tidak diimplementasikan sebagai konektor aktif.
+
+## 8. SETTINGS
+
+Informasi koneksi backend, informasi aplikasi dan versi, preferensi tema, tampilan konfigurasi API (read-only), informasi penyimpanan lokal bila tersedia. **Jangan pernah menampilkan API key, password, token, atau secret, dan jangan menyimpannya di localStorage.**
+
+## 9. ARSITEKTUR FRONTEND
+
+Gunakan struktur yang sesuai dengan repository dan FRONTEND_SPEC.md (bagian "Folder structure"). Saran bila belum ada: `api/`, `components/{layout,navigation,dashboard,projects,connectors,ui}`, `hooks/`, `layouts/`, `pages/`, `routes/`, `styles/`, `types/`, `utils/`. Jangan memaksakan struktur ini bila repository sudah punya yang lebih baik. Gunakan komponen yang dapat dipakai ulang; hindari satu file besar berisi seluruh halaman.
+
+## 10. INTEGRASI API
+
+Satu API client terpusat: base URL dari environment, timeout, penanganan error dan kegagalan jaringan, tipe dari OpenAPI, tanpa request langsung yang tersebar di komponen. Ikuti endpoint aktual dan catat perbedaannya dengan dokumentasi. Jangan memakai mock data sebagai pengganti backend; bila endpoint belum ada, tampilkan NOT IMPLEMENTED atau UNAVAILABLE.
+
+## 11. UX
+
+Semua halaman: loading, empty, dan error state; layout responsif; label aksesibel; navigasi keyboard; tooltip pada tombol icon-only; spacing dan tipografi konsisten; umpan balik setelah aksi. Jangan buat tombol tanpa fungsi; aksi yang belum didukung diberi disabled state dengan alasan.
+
+## 12. KEAMANAN
+
+Local-first; tidak mengekspos secret; tidak menyimpan token atau password di browser storage; frontend bukan security boundary; validasi input di frontend tetapi backend tetap otoritas; tidak menjalankan perintah sembarang dari browser; tidak melakukan operasi destruktif terhadap file engineering; tidak mengirim data ke layanan eksternal tanpa kebutuhan jelas.
+
+## 13. TESTING DAN VALIDASI
+
+1. TypeScript check, lint, dan test frontend bila ada.
+2. Production build.
+3. Periksa semua routing.
+4. Uji frontend terhadap backend yang berjalan, dan uji tampilan error state saat backend dimatikan.
+5. Periksa tampilan halaman dengan screenshot otomatis (misalnya Playwright) bila bisa dipasang; jika tidak, tulis jelas bahwa pemeriksaan visual harus dilakukan manual oleh saya. Jangan mengklaim sudah memeriksa tampilan tanpa bukti.
+6. Pastikan tidak ada tombol yang menyesatkan dan tidak ada status koneksi palsu.
 
 Jangan mengklaim berhasil jika build atau test belum dijalankan.
 
 ## 14. DEFINITION OF DONE
 
-Implementasi dinyatakan selesai apabila:
+- Dashboard, Projects, Connectors, dan Settings berfungsi sesuai kemampuan backend aktual.
+- Sidebar dan routing berjalan; halaman lain berupa placeholder jujur.
+- Design system konsisten dan terpusat; API client terpusat; tipe dari OpenAPI.
+- Loading, empty, dan error state tersedia; tidak ada fake status; tidak ada secret terekspos.
+- TypeScript check dan production build berhasil (dengan bukti keluaran perintah).
+- `docs/FRONTEND_API_GAPS.md` ditulis; FRONTEND_SPEC.md diperbarui sesuai implementasi aktual (perubahan dicatat, tidak menghapus isi penting).
 
-- Dashboard sudah berfungsi.
-- Projects page sudah berfungsi sesuai API yang tersedia.
-- Connectors page sudah berfungsi sesuai kemampuan backend.
-- Settings page sudah tersedia.
-- Sidebar dan routing berjalan.
-- Design system konsisten.
-- API client terpusat.
-- Loading, empty, dan error states tersedia.
-- Tidak ada fake connection status.
-- Tidak ada secret yang terekspos.
-- TypeScript check berhasil.
-- Production build berhasil.
-- Dokumentasi frontend diperbarui sesuai implementasi aktual.
+## 15. ATURAN EKSEKUSI
 
-## 15. EXECUTION RULES
+Kerjakan bertahap: **A** audit (lalu BERHENTI) → **B** design system dan layout → **C** Dashboard → **D** Projects → **E** Connectors → **F** Settings → **G** integrasi API → **H** testing dan review akhir.
 
-Kerjakan secara bertahap:
+Setelah setiap fase: periksa hasil, jalankan test relevan, catat file yang berubah dan kendala, dan **satu commit per fase** dengan pesan yang jelas. Jangan lanjut dengan asumsi bila ada masalah arsitektur; berhenti dan laporkan.
 
-PHASE A — Audit existing frontend dan backend API.
+Jangan: menghapus dokumentasi penting, mengubah backend atau skema database, mengganti teknologi utama tanpa alasan, mengimplementasikan ANSYS, mengklaim fitur bekerja tanpa pengujian, atau memakai data palsu untuk menyamarkan fitur yang belum ada.
 
-PHASE B — Implement design system dan application layout.
+## LAPORAN AKHIR
 
-PHASE C — Implement Dashboard.
+1. Fitur yang dibuat. 2. File baru. 3. File diubah. 4. API yang berhasil diintegrasikan. 5. API yang belum tersedia (rujuk `docs/FRONTEND_API_GAPS.md`). 6. Test dan hasilnya. 7. Hasil build. 8. Known issues. 9. Rekomendasi tahap berikutnya.
 
-PHASE D — Implement Projects.
-
-PHASE E — Implement Connectors.
-
-PHASE F — Implement Settings.
-
-PHASE G — Integrasi API.
-
-PHASE H — Testing, debugging, dan final review.
-
-Setelah setiap fase:
-- Periksa hasil implementasi.
-- Jalankan test yang relevan.
-- Catat file yang berubah.
-- Catat kendala.
-- Jangan lanjut dengan asumsi jika ada masalah arsitektur.
-
-Jangan:
-- Menghapus dokumentasi penting.
-- Mengubah backend tanpa izin.
-- Mengubah database schema tanpa izin.
-- Mengganti teknologi utama tanpa alasan.
-- Mengimplementasikan ANSYS.
-- Mengklaim fitur sudah bekerja tanpa pengujian.
-- Menggunakan fake data untuk menyamarkan fitur yang belum tersedia.
-
-## FINAL REPORT
-
-Setelah selesai, berikan laporan:
-
-1. Fitur yang berhasil dibuat.
-2. Daftar file baru.
-3. Daftar file yang diubah.
-4. API yang berhasil diintegrasikan.
-5. API yang belum tersedia.
-6. Test yang dijalankan dan hasilnya.
-7. Build result.
-8. Known issues.
-9. Rekomendasi tahap berikutnya.
-
-Mulai dengan PHASE A. Audit repository terlebih dahulu, lalu lanjutkan implementasi secara bertahap.
+**Mulai dengan PHASE A. Audit dulu, laporkan, lalu BERHENTI.**
