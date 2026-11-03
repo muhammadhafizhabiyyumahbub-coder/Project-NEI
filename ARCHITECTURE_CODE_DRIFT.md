@@ -116,8 +116,8 @@
 
 | Item | Status |
 |------|--------|
-| `docs/spike/` with JSON results | Not found — need to save box test result JSON here |
-| `environment.json` `generated_at` placeholder `00:00:00Z` | Not checked yet |
+| `docs/spike/` with JSON results | **FIXED** — `docs/spike/rhino_box_test.json` saved from `data/spike/rhino_box_test.json` |
+| `environment.json` `generated_at` placeholder `00:00:00Z` | **FIXED** — set to `2026-11-02T22:59:12+00:00` (actual spike timestamp) |
 
 (Butir 10)
 
