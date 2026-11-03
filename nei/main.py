@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting NEI...")
-    # Reject default session secret outside dev mode
     if settings.session_secret == "insecure-change-me" and settings.environment != "dev":
         raise RuntimeError(
             "Session secret is still the default 'insecure-change-me'. "
