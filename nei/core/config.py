@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     
     # Frontend
     vite_dev_url: str = "http://localhost:5173"
-    static_build_path: Path = Path("frontend/dist")
+    static_build_path: Path = Path("apps/ui/dist")
     
     # LLM
     llm_provider: str = "openai"

@@ -106,7 +106,7 @@
 
 | Item | Current value | Correct value |
 |------|--------------|---------------|
-| `static_build_path` in `nei/core/config.py` | `Path("frontend/dist")` | `Path("apps/ui/dist")` |
+| `static_build_path` in `nei/core/config.py` | `Path("frontend/dist")` → **fixed to `Path("apps/ui/dist")`** |
 
 (Butir 9)
 
