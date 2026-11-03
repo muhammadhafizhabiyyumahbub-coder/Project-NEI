@@ -19,12 +19,29 @@ def _sha256(data: bytes) -> str:
 
 
 def _safe_path(task_id: str, filename: str) -> Path:
-    """Task-specific sandbox under data/artifacts/<task_id>/<filename>."""
-    return ARTIFACTS_ROOT / task_id / filename
+    """Task-specific sandbox under data/artifacts/<task_id>/<filename>.
+
+    Rejects path traversal in task_id or filename.
+    """
+    base = (ARTIFACTS_ROOT / task_id / filename).resolve()
+    root = ARTIFACTS_ROOT.resolve()
+    # Both task_id and filename must stay inside ARTIFACTS_ROOT
+    if root not in base.parents and base.parent != root:
+        raise ValueError(f"Path traversal rejected: {filename!r}")
+    return base
+
+
+def _sanitize_name(name: str, kind: str = "filename") -> str:
+    """Reject filenames containing path separators or traversal sequences."""
+    if not name or "/" in name or "\\" in name or ".." in name or name in (".", ".."):
+        raise ValueError(f"Invalid {kind}: {name!r}")
+    return name
 
 
 async def save_artifact(task_id: str, filename: str, content: bytes) -> str:
-    """Save artifact, return sha256."""
+    """Save artifact, return sha256. Rejects path traversal in filename."""
+    _sanitize_name(task_id, "task_id")
+    _sanitize_name(filename, "filename")
     path = _safe_path(task_id, filename)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as f:
@@ -33,7 +50,9 @@ async def save_artifact(task_id: str, filename: str, content: bytes) -> str:
 
 
 async def load_artifact(task_id: str, filename: str) -> bytes | None:
-    """Load artifact by task_id + filename."""
+    """Load artifact by task_id + filename. Rejects path traversal."""
+    _sanitize_name(task_id, "task_id")
+    _sanitize_name(filename, "filename")
     path = _safe_path(task_id, filename)
     if not path.exists():
         return None
@@ -42,7 +61,9 @@ async def load_artifact(task_id: str, filename: str) -> bytes | None:
 
 
 async def verify_artifact(task_id: str, filename: str, expected_sha: str) -> bool:
-    """Verify SHA-256 matches."""
+    """Verify SHA-256 matches. Rejects path traversal."""
+    _sanitize_name(task_id, "task_id")
+    _sanitize_name(filename, "filename")
     path = _safe_path(task_id, filename)
     if not path.exists():
         return False
