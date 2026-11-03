@@ -190,3 +190,72 @@ def test_list_formulas():
     items = r.json()
     assert len(items) == 1
     assert items[0]["name"] == "F1"
+
+
+def test_search_no_results(tmp_path):
+    """FTS search returns empty list when no chunks match the query."""
+    src_file = tmp_path / "nontext.txt"
+    src_file.write_text("completely unrelated words\nabout ships", encoding="utf-8")
+    client = setup()
+    r = client.post("/api/v1/evidence/sources", json={
+        "title": "Non-Text Source",
+        "source_type": "other",
+        "authority_level": "other",
+        "local_file_path": str(src_file),
+    })
+    assert r.status_code == 200
+    # Search for a word NOT in the document
+    r = client.post("/api/v1/evidence/search", json={"query": "zzznonexistent", "limit": 5})
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_search_by_source_id_filter(tmp_path):
+    """Search restricted to one source excludes results from others."""
+    f1 = tmp_path / "a.txt"
+    f1.write_text("alpha alpha alpha beta", encoding="utf-8")
+    f2 = tmp_path / "b.txt"
+    f2.write_text("beta beta gamma", encoding="utf-8")
+    client = setup()
+    r1 = client.post("/api/v1/evidence/sources", json={
+        "title": "A", "source_type": "other", "authority_level": "other",
+        "local_file_path": str(f1)})
+    r2 = client.post("/api/v1/evidence/sources", json={
+        "title": "B", "source_type": "other", "authority_level": "other",
+        "local_file_path": str(f2)})
+    src1_id = r1.json()["id"]
+    # "gamma" only in source 2 -> filtering to source 1 must return nothing
+    r = client.post("/api/v1/evidence/search", json={
+        "query": "gamma", "source_id": src1_id, "limit": 10})
+    assert r.status_code == 200
+    assert r.json() == []
+    # "beta" in both, but must still appear when searching source 1
+    r = client.post("/api/v1/evidence/search", json={
+        "query": "beta", "source_id": src1_id, "limit": 10})
+    assert r.status_code == 200
+    assert len(r.json()) >= 1
+
+
+def test_checksum_detects_tampering(tmp_path):
+    """Modifying the stored file after ingest must make checksum fail."""
+    src_file = tmp_path / "tamper.txt"
+    src_file.write_text("original content", encoding="utf-8")
+    client = setup()
+    r = client.post("/api/v1/evidence/sources", json={
+        "title": "Tamper Test", "source_type": "other", "authority_level": "other",
+        "local_file_path": str(src_file)})
+    src = r.json()
+    stored = Path(src["local_file_path"])
+    stored.write_text("tampered content", encoding="utf-8")
+    r = client.post(f"/api/v1/evidence/sources/{src['id']}/checksum")
+    assert r.status_code == 200
+    assert r.json()["intact"] is False
+    assert r.json()["expected_sha256"] != r.json()["actual_sha256"]
+
+
+def test_ingest_missing_file():
+    client = setup()
+    r = client.post("/api/v1/evidence/sources", json={
+        "title": "Ghost", "source_type": "other", "authority_level": "other",
+        "local_file_path": "C:/does/not/exist.txt"})
+    assert r.status_code == 404
