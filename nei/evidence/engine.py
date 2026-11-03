@@ -383,6 +383,14 @@ async def advance_formula(formula_id: str, to_status: str,
             f"Cannot transition {formula['review_status']} -> {to_status} "
             f"(only forward in lifecycle)"
         )
+    # Each lifecycle step has a required actor / prerequisite.
+    # LLM/system actor cannot advance past DRAFT (i.e. cannot attach source,
+    # implement, unit test, etc.) — human review is required at every stage.
+    if reviewed_by in ("llm", "system", "agent"):
+        raise ValueError(
+            "LLM/system actor cannot advance formula lifecycle; "
+            f"human review is required to move from {formula['review_status']}"
+        )
     async with get_db() as db:
         raw = formula.get("change_log")
         log = raw if isinstance(raw, list) else (json.loads(raw) if raw else [])
@@ -395,6 +403,13 @@ async def advance_formula(formula_id: str, to_status: str,
         await db.execute(
             "UPDATE formulas SET review_status = ?, reviewed_by = ?, change_log_json = ? WHERE id = ?",
             (to_status, reviewed_by, json.dumps(log), formula_id),
+        )
+        await db.execute(
+            """INSERT INTO audit_events (timestamp, task_id, step_id, event_type, detail_json)
+               VALUES (?, NULL, NULL, ?, ?)""",
+            (_now(), "FORMULA_ADVANCE", json.dumps({
+                "formula_id": formula_id, "to_status": to_status,
+                "reviewed_by": reviewed_by, "reason": reason})),
         )
         await db.commit()
     return await get_formula(formula_id)
