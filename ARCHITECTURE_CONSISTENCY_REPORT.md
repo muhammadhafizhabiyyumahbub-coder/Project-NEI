@@ -37,7 +37,7 @@
 | Connector registry | ✓ | ✓ `nei/connectors/registry.py` | ✓ |
 | Rhino 6 connector | ✓ | ✓ `nei/connectors/rhino6/` | ✓ |
 | SOLIDWORKS connector | ✓ | ✓ `nei/connectors/solidworks2022/` | ✓ |
-| Maxsurf connector | ✓ | ✓ `nei/connectors/maxsurf81/` | ✓ |
+| Maxsurf connector | ✓ | ✓ `nei/connectors/maxsurf/` | ✓ |
 | Verification engine | ✓ | ✓ `nei/verification/engine.py` | ✓ |
 | Evidence engine | ✓ | ✓ `nei/evidence/` | ✓ |
 | Knowledge registries | ✓ | ✓ `nei/knowledge/` | ✓ |

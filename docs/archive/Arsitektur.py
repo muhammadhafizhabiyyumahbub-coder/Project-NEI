@@ -37,7 +37,7 @@ Known environment:
 - Operating system: Windows 11.
 - Rhino: Rhino 6.
 - SOLIDWORKS: SOLIDWORKS 2022.
-- Bentley Maxsurf: Maxsurf Enterprise v8.1.
+- Bentley Maxsurf: Maxsurf 20 V8i.
 - ANSYS: not installed / not currently available; do not implement its connector yet.
 - One computer; all software is local.
 - Current software license status is not verified. Integration must not depend on bypassing licensing and must test only capabilities available in the installed environment.
@@ -377,7 +377,7 @@ NEI/
 │   │   │   ├── executor.py
 │   │   │   ├── scripts/
 │   │   │   └── tests/
-│   │   └── maxsurf81/
+│   │   └── maxsurf/
 │   │       ├── connector.py
 │   │       ├── probe.py
 │   │       ├── file_exchange.py
@@ -886,7 +886,7 @@ For each candidate operation, record:
 - Input/output schema.
 - Known limitations.
 
-## 11.3 Bentley Maxsurf Enterprise v8.1 connector
+## 11.3 Bentley Maxsurf 20 V8i connector
 
 Maxsurf integration must be capability-driven because the exact automation/API availability for this installed release has not yet been established.
 

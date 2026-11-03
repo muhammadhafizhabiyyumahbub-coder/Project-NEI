@@ -28,7 +28,7 @@ Aturan tambahan:
 
 Lingkungan target:
 - Windows 11, satu komputer, semua software lokal.
-- Rhino 6, SOLIDWORKS 2022, Bentley Maxsurf Enterprise v8.1.
+- Rhino 6, SOLIDWORKS 2022, Bentley Maxsurf 20 V8i.
 - ANSYS: belum dikonfirmasi terpasang. **Status DEFERRED. Jangan buat connector ANSYS** sampai saya mengonfirmasi.
 - Spesifikasi perangkat keras: **jangan ditebak dari dokumen lama; ukur** (lihat Phase 0). Sebagai peringatan awal, mesin pengembangan adalah laptop kelas menengah-bawah (Core i3 gen 8, RAM 8 GB, GPU MX230) sehingga anggaran sumber daya adalah kendala desain nyata.
 
