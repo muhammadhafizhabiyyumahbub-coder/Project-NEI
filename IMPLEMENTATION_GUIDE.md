@@ -226,15 +226,19 @@ Create all pages from `FRONTEND_SPEC.md` Phase 2 section:
 - `hooks/useSse.ts` — `EventSource` subscription with reconnect backoff
 - Live update task state in Dashboard and TaskDetail without page reload
 
-### Phase 2 done when:
-- [ ] `npm run build` in `apps/ui` — zero TypeScript errors
-- [ ] Dashboard loads and shows `/health` data
-- [ ] Create project via UI → appears in project list
-- [ ] Create task via UI → task detail shows state
-- [ ] SSE updates task state live (watch RUNNING→COMPLETED without reload)
-- [ ] Cancel task via UI → state updates
-- [ ] Connector health page shows probe results
-- [ ] All API types from OpenAPI
+## Phase 2 — Frontend foundation
+
+### 2.0 Status (as of commit `e636f9f`)
+
+- [x] `npm run build` in `apps/ui` — zero TypeScript errors
+- [x] Dashboard loads and shows `/health` data
+- [x] Create project via UI → appears in project list
+- [x] Create task via UI → task detail shows state
+- [x] SSE updates task state live
+- [x] Cancel task via UI → state updates
+- [x] Connector health page shows probe results
+- [x] All API types from OpenAPI
+- [ ] **Phase 2 accepted: 2026-11-04** — Playwright e2e `e2e/happy-path.spec.ts` passed (6.7s); 99/99 pytest passing
 
 **Stop. Run build. Report to user. Wait for "lanjut" before Phase 3.**
 
