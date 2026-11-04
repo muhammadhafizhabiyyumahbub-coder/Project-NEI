@@ -145,3 +145,52 @@ def test_connector_actions_are_allowlisted():
     result = connector.execute("rhino.run_script", {}, timeout_s=1)
     assert result.success is False
     assert "Unknown action" in result.error
+
+
+def test_execute_ingests_artifact_into_store(tmp_path, monkeypatch):
+    """When connector produces a real artifact_path file, it is ingested + manifest written."""
+    import json
+    import nei.core.artifact_store as art_store
+    from pathlib import Path
+
+    setup_db()
+    client, project, task, tid = make_task()
+    project_root = project["path_root"]
+
+    # Point the artifact store at a temp dir
+    monkeypatch.setattr(art_store, "ARTIFACTS_ROOT", tmp_path)
+
+    # Simulate Rhino producing a .3dm file
+    art_file = Path(project_root) / "artifacts" / "box.3dm"
+    art_file.parent.mkdir(parents=True, exist_ok=True)
+    art_file.write_bytes(b"rhino-binary-bytes")
+
+    # Mock connector.execute to report success with the artifact_path
+    from unittest.mock import patch, MagicMock
+    from nei.connectors.base import ToolResult
+    
+    mock_result = ToolResult(
+        success=True,
+        object_ids=[],
+        data={"success": True, "artifact_path": str(art_file)},
+        error=None,
+    )
+
+    with patch("nei.connectors.rhino6.Rhino6Connector") as MockConn:
+        inst = MockConn.return_value
+        inst.execute.return_value = mock_result
+        inst.get_version.return_value = "Rhino 6.0"
+        r = client.post(f"/api/v1/tasks/{tid}/execute",
+                        json={"action": "rhino.export_copy",
+                              "params": {"artifact_path": str(art_file)}})
+
+    assert r.status_code == 200, r.text
+    # Artifact ingested under data/artifacts/<task_id>/box.3dm
+    ingested = tmp_path / tid / "box.3dm"
+    assert ingested.exists(), "artifact was not ingested into the store"
+    # Manifest written alongside
+    manifest = tmp_path / tid / "box.3dm.manifest.json"
+    assert manifest.exists(), "manifest was not written"
+    m = json.loads(manifest.read_text(encoding="utf-8"))
+    assert m["sha256"] == art_store._sha256(b"rhino-binary-bytes")
+    assert m["source_action"] == "rhino.export_copy"

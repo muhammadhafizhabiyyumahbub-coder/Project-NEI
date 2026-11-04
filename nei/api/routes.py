@@ -246,6 +246,27 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
     connector = Rhino6Connector()
     result = connector.execute(body.action, body.params, timeout_s=60)
 
+    # If a .3dm was produced, ingest it into the artifact store + write a manifest
+    artifact_sha: str | None = None
+    artifact_filename: str | None = None
+    artifact_path = str((body.params or {}).get("artifact_path", ""))
+    if result.success and artifact_path:
+        from pathlib import Path
+        from nei.core import artifact_store
+        src = Path(artifact_path)
+        if src.exists():
+            artifact_filename = src.name
+            content = src.read_bytes()
+            async with get_db() as db:
+                artifact_sha = await artifact_store.save_artifact(task_id, artifact_filename, content)
+                await artifact_store.write_manifest(
+                    task_id, artifact_filename,
+                    {"source_action": body.action, "source_path": str(src)},
+                )
+            # Reflect the artifact in the connector result so verify can find it
+            result.data["artifact_path"] = str(src)
+            result.data["artifact_sha256"] = artifact_sha
+
     async with get_db() as db:
         await db.execute(
             "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
@@ -257,7 +278,8 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
         )
         await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
                         detail_json={"action": body.action, "params": body.params,
-                                     "success": result.success})
+                                     "success": result.success,
+                                     "artifact_sha256": artifact_sha})
         await db.commit()
 
     return {
