@@ -1,6 +1,6 @@
 """Phase 4 evidence + formula API routes."""
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
 
 from nei.evidence import (
@@ -14,13 +14,15 @@ from nei.evidence import (
     get_formula,
     list_formulas,
     advance_formula,
+    get_chunk,
 )
+from nei.evidence.citation_builder import build_citation
+
 
 router = APIRouter()
 
 
 # ── Request models ────────────────────────────────────────────────────────────
-
 class IngestSourceRequest(BaseModel):
     title: str
     source_type: str
@@ -63,8 +65,12 @@ class FormulaAdvanceRequest(BaseModel):
     reason: str = ""
 
 
-# ── Evidence endpoints ────────────────────────────────────────────────────────
+class CitationRequest(BaseModel):
+    chunk_id: str
+    source_id: str
 
+
+# ── Evidence endpoints ────────────────────────────────────────────────────────
 @router.post("/evidence/sources")
 async def ingest_endpoint(body: IngestSourceRequest):
     try:
@@ -112,7 +118,45 @@ async def search_endpoint(body: SearchRequest):
     return await search(body.query, body.source_id, body.limit)
 
 
+# New: citation endpoint
+class CitationRequest(BaseModel):
+    chunk_id: str
+    source_id: str
+
+
+class CitationResponse(BaseModel):
+    citation: str
+
+
+@router.post("/evidence/citation")
+async def citation_endpoint(body: CitationRequest):
+    source = await get_source(body.source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    chunk = await get_chunk(body.chunk_id)
+    if not chunk or chunk["source_id"] != body.source_id:
+        raise HTTPException(status_code=404, detail="Chunk not found for source")
+    return {"citation": build_citation(chunk, source)}
+
+
 # ── Formula endpoints ────────────────────────────────────────────────────────
+class FormulaRequest(BaseModel):
+    name: str
+    domain: str
+    equation_text: str
+    implementation_ref: Optional[str] = None
+    variables: Optional[list[dict]] = None
+    assumptions: Optional[list[str]] = None
+    applicability: Optional[list[str]] = None
+    source_refs: Optional[list[str]] = None
+    source_locations: Optional[list[dict]] = None
+
+
+class FormulaAdvanceRequest(BaseModel):
+    to_status: str
+    reviewed_by: str = "user"
+    reason: str = ""
+
 
 @router.post("/formulas")
 async def register_formula_endpoint(body: FormulaRequest):
@@ -121,14 +165,12 @@ async def register_formula_endpoint(body: FormulaRequest):
         implementation_ref=body.implementation_ref,
         variables=body.variables, assumptions=body.assumptions,
         applicability=body.applicability,
-        source_refs=body.source_refs,
-        source_locations=body.source_locations,
+        source_refs=body.source_refs, source_locations=body.source_locations,
     )
 
 
 @router.get("/formulas")
-async def list_formulas_endpoint(domain: Optional[str] = None,
-                                 status: Optional[str] = None):
+async def list_formulas_endpoint(domain: Optional[str] = None, status: Optional[str] = None):
     return await list_formulas(domain, status)
 
 

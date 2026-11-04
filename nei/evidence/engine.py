@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from nei.core.database import get_db
+from nei.evidence.citation_builder import build_citation
 
 
 def _now() -> str:
@@ -234,6 +235,19 @@ async def set_source_status(source_id: str, status: str, reason: str = "") -> di
     return await get_source(source_id)
 
 
+async def get_chunk(chunk_id: str) -> Optional[dict]:
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            """SELECT c.id, c.source_id, c.page, c.section, c.clause, c.equation_no, c.text
+               FROM evidence_chunks c WHERE c.id = ?""",
+            (chunk_id,))
+    if not rows:
+        return None
+    r = rows[0]
+    return {"id": r[0], "source_id": r[1], "page": r[2],
+            "section": r[3], "clause": r[4], "equation_no": r[5], "text": r[6]}
+
+
 # ── Search ─────────────────────────────────────────────────────────────────────
 
 async def search(query: str, source_id: Optional[str] = None,
@@ -241,35 +255,41 @@ async def search(query: str, source_id: Optional[str] = None,
     """FTS5 lexical search over evidence_chunks. Returns chunk + source context."""
     # NOTE: FTS5 external-content table (content='') does not expose rank
     # when joined to another table. Use FTS MATCH filter only, no ORDER BY rank.
+    query_cols = "s.id AS source_id, s.title, s.verification_status, s.edition, s.year"
     async with get_db() as db:
         if source_id:
             rows = await db.execute_fetchall(
-                """SELECT c.id, c.page, c.section, c.clause, c.equation_no, c.text,
-                          s.id AS source_id, s.title, s.verification_status
-                   FROM evidence_chunks c
-                   JOIN evidence_sources s ON s.id = c.source_id
-                   WHERE c.source_id = ? AND c.rowid IN (
-                       SELECT rowid FROM evidence_chunks_fts WHERE evidence_chunks_fts MATCH ?
-                   )
-                   LIMIT ?""",
+                f"""SELECT c.id, c.page, c.section, c.clause, c.equation_no, c.text,
+                    {query_cols}
+                    FROM evidence_chunks c
+                    JOIN evidence_sources s ON s.id = c.source_id
+                    WHERE c.source_id = ? AND c.rowid IN (
+                        SELECT rowid FROM evidence_chunks_fts WHERE evidence_chunks_fts MATCH ?
+                    )
+                    LIMIT ?""",
                 (source_id, query, limit),
             )
         else:
             rows = await db.execute_fetchall(
-                """SELECT c.id, c.page, c.section, c.clause, c.equation_no, c.text,
-                          s.id AS source_id, s.title, s.verification_status
-                   FROM evidence_chunks c
-                   JOIN evidence_sources s ON s.id = c.source_id
-                   WHERE c.rowid IN (
-                       SELECT rowid FROM evidence_chunks_fts WHERE evidence_chunks_fts MATCH ?
-                   )
-                   LIMIT ?""",
+                f"""SELECT c.id, c.page, c.section, c.clause, c.equation_no, c.text,
+                    {query_cols}
+                    FROM evidence_chunks c
+                    JOIN evidence_sources s ON s.id = c.source_id
+                    WHERE c.rowid IN (
+                        SELECT rowid FROM evidence_chunks_fts WHERE evidence_chunks_fts MATCH ?
+                    )
+                    LIMIT ?""",
                 (query, limit),
             )
     return [
         {"chunk_id": r[0], "page": r[1], "section": r[2], "clause": r[3],
          "equation_no": r[4], "text": r[5], "source_id": r[6],
-         "source_title": r[7], "verification_status": r[8]}
+         "source_title": r[7], "verification_status": r[8],
+         "citation": build_citation(
+             {"page": r[1], "section": r[2], "clause": r[3],
+              "equation_no": r[4]},
+             {"title": r[7], "edition": r[9], "year": r[10]},
+         )}
         for r in rows
     ]
 
