@@ -275,7 +275,7 @@ Create all pages from `FRONTEND_SPEC.md` Phase 2 section:
 
 | Item | Alasan |
 |---|---|
-| Live Rhino 6 command‑line invocation (`Rhino.exe -b macro.rhp`) | Rhino 6 belum terpasang di mesin ini; transport method 2 (`-b` batch macro) belum di‑verify di environment asli. |
+| Live Rhino 6 command‑line invocation (`Rhino.exe -b macro.rhp` / `Rhino.exe -RunPythonScript`) | Rhino 6 belum terpasang di mesin ini; transport method 2 (`-b` batch macro) dan pemanggilan `-RunPythonScript` belum diverifikasi di environment asli. |
 | Rhino Python 2.7 environment availability | Tidak ada garansi RhinoPython add‑on aktif; mock subprocess dipakai. |
 | `.3dm` file generation + file‑system writes oleh Rhino | Script template valid, tapi belum dijalankan di Rhino live. |
 | SOLIDWORKS 2022 connector | Belum diimplementasi (Phase 6). |
