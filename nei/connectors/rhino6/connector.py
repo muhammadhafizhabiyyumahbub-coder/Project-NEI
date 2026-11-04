@@ -492,21 +492,22 @@ main()
         a known file path; this method reads that file after Rhino completes.
 
         Returns parsed dict, or None on error/timeout.
+
+        NOTE (2026-11-04): live invocation via `/runscript` has not been verified
+        on this machine (all 10 attempts timed out at 60s, Rhino exited with code 1
+        without executing the script). The previous `.rhp` macro approach produced
+        "Unable to load ... plug-in" errors and is removed.
         """
         result_path.unlink(missing_ok=True)
 
-        # Run Rhino headless in batch mode via a .rhp macro file.
-        # Rhino.exe -b <macro.rhp> -newdoc
-        # Macro wraps _RunPythonScript + _Exit so Rhino terminates after script completes.
-        macro_path = script_path + ".rhp"
-        Path(macro_path).write_text(
-            f'_RunPythonScript "{script_path}"\n_Exit\n', encoding="utf-8"
-        )
-
+        # Per McNeel docs: /nosplash /notemplate /runscript="_-RunPythonScript <path> _-Exit"
+        # Parentheses around path only needed when it contains spaces.
+        inner = f"_-RunPythonScript {script_path} _-Exit"
         cmd = [
             self._rhino_exe,
-            "-b", macro_path,   # batch mode (headless, no GUI)
-            "-newdoc",         # start from blank document
+            "/nosplash",
+            "/notemplate",
+            f"/runscript={inner}",
         ]
 
         try:
@@ -521,9 +522,6 @@ main()
                 return None
         except Exception:
             return None
-        finally:
-            # Cleanup after Rhino has exited (macro file needed while running)
-            Path(macro_path).unlink(missing_ok=True)
 
         # Read result JSON produced by the script
         if not result_path.exists():
