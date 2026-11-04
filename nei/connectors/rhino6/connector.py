@@ -212,6 +212,54 @@ def _render_inspect_script(object_ids: list, result_path: str) -> str:
     return script
 
 
+# Script to export a copy of the active document to a .3dm artifact.
+# Writes a NEW file; never overwrites the active document or user files.
+EXPORT_COPY_SCRIPT_TEMPLATE = '''\
+import rhinoscriptsyntax as rs
+import Rhino
+import json
+import os
+
+def main():
+    result = {"success": False}
+
+    artifact_path = {ARTIFACT_PATH}
+    if not artifact_path:
+        result["error"] = "artifact_path is required"
+        with open({RESULT_PATH}, "w") as f:
+            json.dump(result, f)
+        return
+
+    doc = Rhino.RhinoDoc.ActiveDoc
+    if doc is None:
+        result["error"] = "No active Rhino document"
+        with open({RESULT_PATH}, "w") as f:
+            json.dump(result, f)
+        return
+
+    os.makedirs(os.path.dirname(artifact_path), exist_ok=True)
+    # SaveAs copies the active doc to a new file (does not modify the doc)
+    ok = doc.SaveAs(artifact_path, 0)
+    if not ok:
+        result["error"] = "SaveAs failed"
+    else:
+        result["success"] = True
+        result["artifact_path"] = artifact_path
+
+    with open({RESULT_PATH}, "w") as f:
+        json.dump(result, f)
+
+main()
+'''
+
+
+def _render_export_copy_script(artifact_path: str, result_path: str) -> str:
+    script = EXPORT_COPY_SCRIPT_TEMPLATE
+    script = script.replace("{ARTIFACT_PATH}", json.dumps(artifact_path))
+    script = script.replace("{RESULT_PATH}", json.dumps(result_path))
+    return script
+
+
 class Rhino6Connector(BaseConnector):
     connector_id = "rhino6"
     name = "Rhino 6"
@@ -299,6 +347,11 @@ class Rhino6Connector(BaseConnector):
             return self._inspect_objects(object_ids)
         elif action == "rhino.get_document_info":
             return self._document_info()
+        elif action == "rhino.export_copy":
+            artifact_path = parameters.get("artifact_path", "")
+            if not isinstance(artifact_path, str):
+                return ToolResult(success=False, error="artifact_path must be a string")
+            return self._export_copy(artifact_path)
         else:
             return ToolResult(success=False, error=f"Unknown action: {action}")
 
@@ -409,6 +462,24 @@ main()
             return ToolResult(success=False, error="Document info script did not produce result JSON")
         return ToolResult(success=result.get("success", False), data=result,
                           error=None if result.get("success") else result.get("error"))
+
+    def _export_copy(self, artifact_path: str, timeout_s: int = 30) -> ToolResult:
+        """Export a copy of the active document to artifact_path (new .3dm file)."""
+        tmp = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_export.json"
+        tmp.unlink(missing_ok=True)
+
+        script_content = _render_export_copy_script(artifact_path, str(tmp))
+        tmp_script = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_export.py"
+        tmp_script.write_text(script_content, encoding="utf-8")
+
+        result = self._run_rhino_script(str(tmp_script), tmp, timeout_s)
+        tmp_script.unlink(missing_ok=True)
+
+        if result is None:
+            return ToolResult(success=False, error="Export script did not produce result JSON")
+        success = result.get("success", False)
+        return ToolResult(success=success, data=result,
+                         error=None if success else result.get("error"))
 
     # ── Rhino invocation ───────────────────────────────────────────────────────
 

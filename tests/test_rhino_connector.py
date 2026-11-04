@@ -151,3 +151,48 @@ def test_execute_timeout_kills_process():
     assert result.success is False
     # Timeout causes None result -> error message
     assert "did not produce result" in result.error
+
+
+def test_export_copy_success():
+    conn = Rhino6Connector()
+    fake_result = {"success": True, "artifact_path": r"C:\out\copy.3dm"}
+    with patch.object(conn, "_run_rhino_script", return_value=fake_result):
+        result = conn.execute(
+            "rhino.export_copy",
+            {"artifact_path": r"C:\out\copy.3dm"},
+            timeout_s=5,
+        )
+    assert result.success is True
+    assert result.data["artifact_path"] == r"C:\out\copy.3dm"
+
+
+def test_export_copy_failure():
+    conn = Rhino6Connector()
+    fake_result = {"success": False, "error": "SaveAs failed"}
+    with patch.object(conn, "_run_rhino_script", return_value=fake_result):
+        result = conn.execute("rhino.export_copy", {"artifact_path": r"C:\x.3dm"}, timeout_s=5)
+    assert result.success is False
+    assert "SaveAs" in result.error
+
+
+def test_export_copy_requires_string_path():
+    conn = Rhino6Connector()
+    result = conn.execute("rhino.export_copy", {"artifact_path": 123}, timeout_s=5)
+    assert result.success is False
+    assert "artifact_path must be a string" in result.error
+
+
+def test_export_copy_script_is_python2_compatible():
+    conn = Rhino6Connector()
+    fake_result = {"success": True}
+    captured = []
+    def fake_run(script_path, result_path, timeout_s):
+        captured.append(Path(script_path).read_text(encoding="utf-8"))
+        return fake_result
+    with patch.object(conn, "_run_rhino_script", side_effect=fake_run):
+        conn.execute("rhino.export_copy", {"artifact_path": r"C:\out\x.3dm"}, timeout_s=5)
+    assert captured, "no script captured"
+    script = captured[0]
+    assert "f'" not in script, "f-string detected — not Python 2.7 compatible"
+    # json.dumps escapes backslashes, so the path appears as C:\\out\\x.3dm in the script
+    assert "out" in script and "x.3dm" in script

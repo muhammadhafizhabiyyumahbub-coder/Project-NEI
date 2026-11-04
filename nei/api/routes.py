@@ -223,6 +223,16 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
                 raise HTTPException(status_code=400,
                                     detail=f"artifact_path outside sandbox: {ap}")
 
+    # Validate artifact_path sandbox for export_copy
+    if body.action == "rhino.export_copy":
+        params = body.params or {}
+        if "artifact_path" in params and params["artifact_path"]:
+            ap = str(params["artifact_path"])
+            project_root = task.get("path_root") or str(PROJECTS_ROOT / task["project_id"])
+            if not validate_sandbox_path(ap, project_root):
+                raise HTTPException(status_code=400,
+                                    detail=f"artifact_path outside sandbox: {ap}")
+
     connector = Rhino6Connector()
     result = connector.execute(body.action, body.params, timeout_s=60)
 

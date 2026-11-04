@@ -48,6 +48,7 @@ ALLOWED_ACTIONS = {
     "rhino.create_box_test",
     "rhino.inspect_objects",
     "rhino.get_document_info",
+    "rhino.export_copy",
 }
 
 
