@@ -25,7 +25,11 @@ Evidence: `RhRdkShellExt_x64.dll` present in `D:\Rhino 6\System\`. RhinoCommon.d
 - RhinoPython is bundled with Rhino 6
 - Scripts must be Python 2.7 syntax (no f-strings, no `print()` as function without import)
 - `_RunPythonScript` command invokes a script file without GUI interaction
-- **UNVERIFIED:** Whether `_RunPythonScript` works without GUI in the installed edition
+- **VERIFIED (manual, 2026-11-02):** box test passed when run from inside Rhino GUI
+- **UNVERIFIED (command-line, 2026-11-04):** 10 live attempts using
+  `Rhino.exe /nosplash /notemplate /runscript=_-RunPythonScript <path> _-Exit`
+  all failed — Rhino stayed open 60 s and was force-killed; script never executed.
+  Likely a startup modal dialog blocks `/runscript`. See `docs/spike/rhino_cli_test.md`.
 - **Risk:** Python 2.7 is EOL; maintenance burden for any non-trivial script
 
 ### Method 3: Command-line (`_RunCommand` / `_RunScriptFile`) — PARTIALLY VIABLE
@@ -76,14 +80,16 @@ The safe spike test (10×3×1 box in a disposable document) can be run **immedia
 | `_RunPythonScript` without GUI | UNVERIFIED — test in Phase 0 |
 | Named pipe / HTTP helper | UNVERIFIED — test in Phase 0 |
 | Third-party plugin loading permitted | UNVERIFIED — check Rhino plugin settings |
+| **Command-line `/runscript` on this machine** | **UNVERIFIED** — 10 live attempts 2026-11-04 all failed; see `docs/spike/rhino_cli_test.md` |
 
 ### RhinoPython Method 2 Test Result
 
-- **Status:** PASSED
+- **Status:** PASSED (manual execution inside Rhino GUI only)
 - **Dimensions:** L=10.0 W=3.0 H=1.0 (within 0.001 tolerance)
 - **Units:** Millimeters
 - **Artifact:** data/spike/rhino_box_test.3dm saved
 - **Result file:** data/spike/rhino_box_test.json
 - **Time:** 2026-11-02 22:59:12
+- **CLI invocation (Rhino.exe /runscript):** **NOT VERIFIED** — see `docs/spike/rhino_cli_test.md`
 
-**Conclusion:** RhinoPython Method 2 successfully created and verified the box dimensions.
+**Conclusion:** RhinoPython Method 2 successfully created and verified the box dimensions **when run from inside the Rhino GUI**. Command-line invocation from the NEI backend remains unverified and requires manual diagnosis of the blocking startup dialog.

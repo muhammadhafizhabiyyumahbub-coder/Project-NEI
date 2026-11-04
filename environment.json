@@ -95,7 +95,8 @@
   "phase_0_conclusion": {
     "status": "COMPLETE",
     "rhino6_bitness": "64-bit (RESOLVED)",
-    "rhino6_transport_method": "RhinoPython Method 2 (PASSED box test)",
+    "rhino6_transport_method": "RhinoPython Method 2 (PASSED box test via manual execution inside Rhino)",
+    "rhino6_cli_invocation": "UNVERIFIED — 2026-11-04: 10 live attempts of /runscript + -_RunPythonScript all failed; Rhino did not process runscript (see docs/spike/rhino_cli_test.md)",
     "dashboard_hosting": "Separate Vite (port 5173) + FastAPI static (DECIDED)",
     "python_version": "3.13.7 (system default, all libs compatible)",
     "maxsurf_actual_version": "Maxsurf 20 V8i (not Enterprise v8.1)",
