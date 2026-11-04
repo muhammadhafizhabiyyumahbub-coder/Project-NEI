@@ -155,13 +155,23 @@ async def cancel_task_endpoint(task_id: str):
 async def verify_task_endpoint(task_id: str, body: models.VerifyRequest):
     """Run verification checks against connector result. Task must be in VERIFYING state."""
     from nei.core.task_manager import verify_task
-    from nei.verification.postconditions import rhino_box_postconditions
+    from nei.verification.postconditions import rhino_box_postconditions, rhino_export_copy_postconditions
+    # Choose postconditions based on which task type this is:
+    # export_copy: artifact path comes from connector_result
+    # box: default box postconditions
+    connector_result = body.connector_result or {}
+    artifact_path = connector_result.get("artifact_path", "")
+    if artifact_path:
+        filename = artifact_path.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+        pcs = rhino_export_copy_postconditions(filename=filename)
+    else:
+        pcs = rhino_box_postconditions(body.length, body.width, body.height)
     try:
         return await verify_task(
             task_id,
-            body.connector_result,
+            connector_result,
             body.software_version,
-            postconditions=rhino_box_postconditions(body.length, body.width, body.height),
+            postconditions=pcs,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

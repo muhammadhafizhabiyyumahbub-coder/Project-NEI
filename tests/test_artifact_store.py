@@ -89,3 +89,22 @@ def test_safe_path_contains_check(tmp_path):
         assert p.is_relative_to(tmp_path.resolve()), f"{p} not inside {tmp_path}"
     finally:
         artifact_store.ARTIFACTS_ROOT = original_root()
+
+
+def test_write_manifest(tmp_path):
+    """write_manifest produces a .manifest.json next to the artifact."""
+    original = artifact_store.ARTIFACTS_ROOT
+    artifact_store.ARTIFACTS_ROOT = tmp_path
+    try:
+        _run(artifact_store.save_artifact("t1", "out.3dm", b"binary"))
+        m = _run(artifact_store.write_manifest("t1", "out.3dm", {"source": "rhino"}))
+        assert m["sha256"] == artifact_store._sha256(b"binary")
+        assert m["source"] == "rhino"
+        manifest_file = tmp_path / "t1" / "out.3dm.manifest.json"
+        assert manifest_file.exists()
+        # missing artifact raises
+        import pytest
+        with pytest.raises(FileNotFoundError):
+            _run(artifact_store.write_manifest("t1", "nope.3dm"))
+    finally:
+        artifact_store.ARTIFACTS_ROOT = original

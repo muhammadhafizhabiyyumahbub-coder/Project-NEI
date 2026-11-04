@@ -84,3 +84,10 @@ def rhino_box_postconditions(length: float, width: float, height: float) -> list
         BoundingBoxCheck(length=length, width=width, height=height, tolerance=0.001),
         DocumentUnitsCheck(units="Millimeters"),
     ]
+
+
+def rhino_export_copy_postconditions(filename: str, expected_sha256: Optional[str] = None) -> list[PostCondition]:
+    """Postconditions for Rhino export_copy: artifact exists with optional known SHA-256."""
+    return [
+        ArtifactSavedCheck(filename=filename, expected_sha256=expected_sha256),
+    ]

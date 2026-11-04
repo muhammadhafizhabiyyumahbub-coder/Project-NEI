@@ -1,5 +1,6 @@
 """Artifact store: SHA-256 integrity, path sandboxing, status tracking."""
 import os
+import json
 import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
@@ -89,3 +90,29 @@ async def list_artifacts(task_id: str) -> List[Dict]:
         }
         for p in task_dir.iterdir() if p.is_file()
     ]
+
+
+async def write_manifest(task_id: str, filename: str, extra: dict | None = None) -> dict:
+    """Write a JSON manifest for an artifact file. Returns manifest dict.
+
+    Manifest is saved alongside the artifact as `<filename>.manifest.json`.
+    """
+    _sanitize_name(task_id, "task_id")
+    _sanitize_name(filename, "filename")
+    path = _safe_path(task_id, filename)
+    if not path.exists():
+        raise FileNotFoundError(f"artifact not found: {filename}")
+    manifest = {
+        "task_id": task_id,
+        "filename": filename,
+        "path": str(path),
+        "sha256": _sha256(path.read_bytes()),
+        "size_bytes": path.stat().st_size,
+        "created_at": _now(),
+    }
+    if extra:
+        manifest.update(extra)
+    manifest_name = filename + ".manifest.json"
+    manifest_path = _safe_path(task_id, manifest_name)
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest

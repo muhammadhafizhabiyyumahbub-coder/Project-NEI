@@ -88,8 +88,40 @@ class VerificationEngine:
             return geometry_check.check_document_units(expected, actual)
 
         elif pc.target == "artifact_saved":
-            # Filesystem check — not connector result
-            return self._incomplete(pc, "artifact_saved not implemented in Alpha 0.1")
+            # Real filesystem check via artifact_store (needs task_id from outer scope)
+            from nei.core import artifact_store
+            filename = pc.expected.get("filename", "")
+            expected_sha = pc.expected.get("sha256")
+            if not filename:
+                return self._incomplete(pc, "artifact filename missing in expected")
+            # load_artifact returns None if file does not exist
+            content = await artifact_store.load_artifact(task_id, filename)
+            if content is None:
+                return VerificationCheck(
+                    target=pc.target, expected=pc.expected, actual={"exists": False},
+                    tolerance=pc.tolerance, method=pc.method,
+                    result="FAILED", evidence=f"artifact not found: {filename}",
+                    timestamp=VerificationRecord.now(),
+                )
+            if expected_sha:
+                ok = await artifact_store.verify_artifact(task_id, filename, expected_sha)
+                return VerificationCheck(
+                    target=pc.target,
+                    expected=pc.expected,
+                    actual={"exists": True, "sha_ok": ok},
+                    tolerance=pc.tolerance, method=pc.method,
+                    result="PASSED" if ok else "FAILED",
+                    evidence=f"sha256 match={ok}",
+                    timestamp=VerificationRecord.now(),
+                )
+            return VerificationCheck(
+                target=pc.target, expected=pc.expected,
+                actual={"exists": True},
+                tolerance=pc.tolerance, method=pc.method,
+                result="PASSED",
+                evidence=f"artifact exists: {filename}",
+                timestamp=VerificationRecord.now(),
+            )
 
         else:
             return self._incomplete(pc, f"unknown target: {pc.target}")
