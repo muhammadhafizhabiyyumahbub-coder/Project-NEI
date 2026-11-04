@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import logging
 
 from nei.api import routes, sse
@@ -144,3 +144,16 @@ app.include_router(engineering_routes.router, prefix="/api/v1")
 
 if settings.static_build_path.exists():
     app.mount("/", StaticFiles(html=True, directory=str(settings.static_build_path)), name="static")
+
+
+@app.middleware("http")
+async def spa_fallback(request: Request, call_next):
+    """Serve `index.html` for unknown frontend routes (deep links, refresh)."""
+    response = await call_next(request)
+    if (
+        response.status_code == 404
+        and not request.url.path.startswith("/api/")
+        and request.url.path not in ("/openapi.json", "/docs", "/redoc", "/favicon.ico")
+    ):
+        return FileResponse(str(settings.static_build_path / "index.html"), status_code=200)
+    return response
