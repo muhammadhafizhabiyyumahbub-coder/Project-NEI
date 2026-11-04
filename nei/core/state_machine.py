@@ -31,7 +31,7 @@ class TaskStateTransition:
         TaskStatus.VALIDATING: [TaskStatus.WAITING_APPROVAL, TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.WAITING_APPROVAL: [TaskStatus.QUEUED, TaskStatus.CANCELLED],
         TaskStatus.QUEUED: [TaskStatus.RUNNING, TaskStatus.CANCELLED],
-        TaskStatus.RUNNING: [TaskStatus.VERIFYING, TaskStatus.RECOVERING, TaskStatus.CANCELLED],
+        TaskStatus.RUNNING: [TaskStatus.VERIFYING, TaskStatus.RECOVERING, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.VERIFYING: [TaskStatus.COMPLETED, TaskStatus.NEEDS_REVIEW, TaskStatus.FAILED],
         TaskStatus.RECOVERING: [TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.COMPLETED: [],

@@ -41,7 +41,7 @@ def test_verification_passed():
         "object_ids": ["box1"],
         "objects": [{"id": "box1", "type": "Brep",
                      "bounding_box": {"length": 10.0, "width": 3.0, "height": 1.0}}],
-        "document": {"units": "Millimeters"},
+        "document": {"units": "millimeter"},
     }
     r = client.post(f"/api/v1/tasks/{tid}/verify", json={
         "connector_result": connector_result,
@@ -71,7 +71,7 @@ def test_verification_failed_dimension():
         "object_ids": ["box1"],
         "objects": [{"id": "box1", "type": "Brep",
                      "bounding_box": {"length": 10.5, "width": 3.0, "height": 1.0}}],
-        "document": {"units": "Millimeters"},
+        "document": {"units": "millimeter"},
     }
     r = client.post(f"/api/v1/tasks/{tid}/verify", json={
         "connector_result": connector_result,

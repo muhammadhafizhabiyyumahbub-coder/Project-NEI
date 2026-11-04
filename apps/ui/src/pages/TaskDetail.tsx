@@ -1,18 +1,45 @@
 import { useTask } from "../hooks/useTask";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { cancelTask } from "../api/client";
+import { cancelTask, executeTask, verifyTask, runTask } from "../api/client";
 import { useParams } from "react-router-dom";
+import { useState } from "react";
 
 export function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const queryClient = useQueryClient();
   const { task, isLoading, error, events } = useTask(taskId);
+  const [lastResult, setLastResult] = useState<Record<string, unknown> | null>(null);
 
   const { mutate: cancel, isPending: isCancelling } = useMutation({
     mutationFn: cancelTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task", taskId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const { mutate: runTaskFull, isPending: isRunningFull } = useMutation({
+    mutationFn: () => runTask(taskId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const { mutate: runAction, isPending: isRunning } = useMutation({
+    mutationFn: ({ action, params }: { action: string; params?: Record<string, unknown> }) =>
+      executeTask(taskId!, { action, params }),
+    onSuccess: (data) => {
+      setLastResult(data as unknown as Record<string, unknown>);
+      queryClient.invalidateQueries({ queryKey: ["task", taskId] });
+    },
+  });
+
+  const { mutate: runVerify, isPending: isVerifying } = useMutation({
+    mutationFn: (body: { connector_result?: Record<string, unknown>; software_version?: string; length?: number; width?: number; height?: number }) =>
+      verifyTask(taskId!, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", taskId] });
     },
   });
 
@@ -32,6 +59,46 @@ export function TaskDetail() {
               <div><span>Risk:</span> <span className="ml-2">{task.risk_level}</span></div>
             </div>
           </div>
+
+          <div className="mb-4 p-4 border rounded">
+            <h3 className="font-medium mb-2">Run Action</h3>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => runTaskFull()}
+                disabled={isRunningFull || task.state !== "pending"}
+                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm font-medium"
+                title="Drive pending task through plan → execute → verify (PENDING only)"
+              >
+                Run Full Flow
+              </button>
+              <button onClick={() => runAction({ action: "rhino.get_document_info" })} disabled={isRunning} className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm">
+                Get Document Info
+              </button>
+              <button onClick={() => runAction({ action: "rhino.create_box_test", params: { length: 10, width: 3, height: 1 } })} disabled={isRunning} className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm">
+                Create Box 10×3×1
+              </button>
+              <button onClick={() => runAction({ action: "rhino.inspect_objects", params: {} })} disabled={isRunning} className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm">
+                Inspect Objects
+              </button>
+              <button
+                onClick={() => runVerify({
+                  connector_result: (lastResult?.data as Record<string, unknown>) ?? {},
+                  software_version: "Rhino 6",
+                  length: 10, width: 3, height: 1,
+                })}
+                disabled={isVerifying}
+                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
+              >
+                Verify
+              </button>
+            </div>
+            {isRunningFull && <p className="mt-2 text-sm text-gray-400">Running full flow…</p>}
+            {isRunning && <p className="mt-2 text-sm text-gray-400">Running…</p>}
+            {lastResult && (
+              <pre className="mt-2 text-xs bg-black/30 p-2 rounded overflow-auto max-h-60">{JSON.stringify(lastResult, null, 2)}</pre>
+            )}
+          </div>
+
           <div>
             <h3 className="font-medium mb-2">Events</h3>
             {events.length === 0 ? <p className="text-gray-500">No events.</p> : (

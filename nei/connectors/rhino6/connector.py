@@ -87,13 +87,18 @@ def main():
     result = {"success": False}
 
     # Capture pre-state: object count before
-    pre_count = len(rs.Objects())
+    pre_count = len(rs.AllObjects())
 
-    # Create new disposable document (do NOT touch existing documents)
-    doc = Rhino.RhinoApp.NewDocument()
+    # Work in active document (do NOT create new doc inside listener)
+    doc = Rhino.RhinoDoc.ActiveDoc
+    if doc is None:
+        result["error"] = "No active document"
+        with open({RESULT_PATH}, "w") as f:
+            json.dump(result, f)
+        return
 
-    # Set units to millimeters
-    rs.UnitSystem(5)  # 5 = millimeters in Rhino
+    # Set units to millimeters (rhinoscript: 1=micron, 2=mm, 3=cm, 4=m, 5=in, 6=ft, 7=yd)
+    rs.UnitSystem(2)
 
     # Create box: L x W x H
     l, w, h = {L}, {W}, {H}
@@ -113,7 +118,7 @@ def main():
         if bb is None:
             result["error"] = "BoundingBox returned None"
         else:
-            min_pt, max_pt = bb
+            min_pt, max_pt = bb[0], bb[6]
             length   = abs(max_pt[0] - min_pt[0])
             width    = abs(max_pt[1] - min_pt[1])
             height   = abs(max_pt[2] - min_pt[2])
@@ -133,7 +138,7 @@ def main():
                 ],
                 "document": {"units": rs.UnitSystemName()},
                 "pre_object_count": pre_count,
-                "post_object_count": len(rs.Objects()),
+                "post_object_count": len(rs.AllObjects()),
             }
 
     # Write result JSON to absolute path passed by the backend
@@ -161,19 +166,19 @@ def main():
 
     doc = Rhino.RhinoDoc.ActiveDoc
     units_name = rs.UnitSystemName()
-    obj_count = len(rs.Objects())
+    obj_count = len(rs.AllObjects())
 
     # Inspect specific object IDs passed in
     obj_ids = {OBJECT_IDS}
     for oid in obj_ids:
-        ids = rs.CoerceGuid(oid)
-        if ids is not None:
-            bb = rs.BoundingBox(ids[0])
+        guid = rs.coerceguid(oid)
+        if guid is not None:
+            bb = rs.BoundingBox(guid)
             if bb is not None:
-                min_pt, max_pt = bb
+                min_pt, max_pt = bb[0], bb[6]
                 entry = {
-                    "id": str(ids[0]),
-                    "type": rs.ObjectType(ids[0]),
+                    "id": str(guid),
+                    "type": rs.ObjectType(guid),
                     "bounding_box": {
                         "length": round(abs(max_pt[0] - min_pt[0]), 6),
                         "width":  round(abs(max_pt[1] - min_pt[1]), 6),
@@ -181,7 +186,7 @@ def main():
                     }
                 }
             else:
-                entry = {"id": str(ids[0]), "type": rs.ObjectType(ids[0]), "bounding_box": None}
+                entry = {"id": str(guid), "type": rs.ObjectType(guid), "bounding_box": None}
             result["objects"].append(entry)
 
     result["document"] = {"units": units_name, "object_count": obj_count}
@@ -416,6 +421,8 @@ class Rhino6Connector(BaseConnector):
 
         # If no IDs given, script with empty list will inspect all active document objects
         script_content = _render_inspect_script(object_ids, str(tmp))
+        # RhinoPython 2.7 uses rs.AllObjects() (rs.Objects() is unavailable in 2.7)
+        script_content = script_content.replace("rs.Objects()", "rs.AllObjects()")
         tmp_script = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_inspect.py"
         tmp_script.write_text(script_content, encoding="utf-8")
 
@@ -443,7 +450,7 @@ def main():
         "success": True,
         "document": {
             "units": rs.UnitSystemName(),
-            "object_count": len(rs.Objects()),
+            "object_count": len(rs.AllObjects()),
             "doc_name": doc.Name if doc else None,
         }
     }
@@ -482,46 +489,25 @@ main()
                          error=None if success else result.get("error"))
 
     # ── Rhino invocation ───────────────────────────────────────────────────────
+    # Passive mode: Rhino stays open; NEI sends script via file, Rhino runs it and writes result.json.
+    # Listener is non-blocking (timer-based) - Rhino UI stays responsive.
 
     def _run_rhino_script(self, script_path: str, result_path: Path,
                           timeout_s: int) -> Optional[dict]:
-        """Invoke Rhino's _RunPythonScript and read back the result JSON.
+        """Invoke Rhino via passive listener (file-based) instead of direct CLI.
 
-        Rhino 6 accepts _RunPythonScript <path> as a command that runs a Python
-        script in the RhinoPython environment. The script writes its result to
-        a known file path; this method reads that file after Rhino completes.
+        Command flow:
+          1. Backend writes command.json -> listener timer picks it up (0.5s tick)
+          2. Listener execfile(script) inside Rhino; script writes result JSON to result_path
+          3. Backend polls result_path until it appears (or timeout)
 
+        Requires Rhino running with listener.py installed via startup command.
         Returns parsed dict, or None on error/timeout.
-
-        NOTE (2026-11-04): live invocation via `/runscript` has not been verified
-        on this machine (all 10 attempts timed out at 60s, Rhino exited with code 1
-        without executing the script). The previous `.rhp` macro approach produced
-        "Unable to load ... plug-in" errors and is removed.
         """
-        result_path.unlink(missing_ok=True)
+        from .listener_client import send_cmd
 
-        # Per McNeel docs: /nosplash /notemplate /runscript="_-RunPythonScript <path> _-Exit"
-        # Parentheses around path only needed when it contains spaces.
-        inner = f"_-RunPythonScript {script_path} _-Exit"
-        cmd = [
-            self._rhino_exe,
-            "/nosplash",
-            "/notemplate",
-            f"/runscript={inner}",
-        ]
-
-        try:
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-            )
-            try:
-                proc.communicate(timeout=timeout_s)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
-                return None
-        except Exception:
-            return None
+        # Listener executes the script inside Rhino; the script writes its result JSON to result_path.
+        send_cmd(script_path, timeout_s=timeout_s)
 
         # Read result JSON produced by the script
         if not result_path.exists():

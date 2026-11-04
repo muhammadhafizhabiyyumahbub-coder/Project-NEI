@@ -29,8 +29,8 @@ def test_live_cli_box_test():
         result_path = Path(tmpdir) / "result.json"
         script_path = Path(tmpdir) / "box.py"
         script_path.write_text(
-            BOX_TEST_PY2, encoding="utf-8"
-        ).replace(BOX_TEST_PY2, BOX_TEST_PY2.replace("RESULT_PATH", repr(str(result_path))))
+            BOX_TEST_PY2.replace("RESULT_PATH", repr(str(result_path))), encoding="utf-8"
+        )
 
         result = conn.execute(
             "rhino.create_box_test",

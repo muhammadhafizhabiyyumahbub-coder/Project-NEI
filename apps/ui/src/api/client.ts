@@ -154,6 +154,32 @@ export async function cancelTask(taskId: string): Promise<Task> {
   return http(`/tasks/${taskId}/cancel`, { method: "POST" });
 }
 
+export async function executeTask(
+  taskId: string,
+  body: { action: string; params?: Record<string, unknown> },
+): Promise<{ success: boolean; object_ids: string[]; data: Record<string, unknown>; error: string | null }> {
+  return http(`/tasks/${taskId}/execute`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function verifyTask(
+  taskId: string,
+  body: {
+    connector_result?: Record<string, unknown>;
+    software_version?: string;
+    length?: number;
+    width?: number;
+    height?: number;
+  },
+): Promise<Task> {
+  return http(`/tasks/${taskId}/verify`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function runTask(
+  taskId: string,
+): Promise<Task> {
+  return http(`/tasks/${taskId}/run`, { method: "POST" });
+}
+
 export async function getTaskEvents(taskId: string): Promise<TaskEvent[]> {
   return http(`/tasks/${taskId}/events_raw`);
 }

@@ -82,7 +82,7 @@ def rhino_box_postconditions(length: float, width: float, height: float) -> list
         ObjectCountCheck(count=1),
         ObjectTypeCheck(object_type="Brep"),
         BoundingBoxCheck(length=length, width=width, height=height, tolerance=0.001),
-        DocumentUnitsCheck(units="Millimeters"),
+        DocumentUnitsCheck(units="millimeter"),
     ]
 
 
