@@ -1,7 +1,25 @@
 # NEI — Rhino 6 Integration Spike
 
-**Status:** Design document. No method is recommended until experiments are run on the target machine.
+**Status:** Method decided — **Method 4 (passive file-based listener)** is in use
+for Alpha 0.1. Direct CLI launch (Method 3) was attempted live and failed
+(10/10, exit code 1). See "Decision" section below.
 **Phase:** 0 (spike), 3 (implementation)
+
+---
+
+## Decision (2026-11-04, Alpha 0.1)
+
+| Method | Outcome on this machine |
+|--------|-------------------------|
+| 1. RhinoCommon C# plugin | Not pursued (needs C# toolchain + signed plugin load) |
+| 2. RhinoPython embedded 2.7 | Used, **via** the passive listener |
+| 3. CLI launch (`/runscript`) | **FAILED** — 10/10 live trials timed out at 60s, Rhino exited code 1, single-instance zombie absorbed the launch |
+| 4. Passive file-based listener | **ADOPTED** — Rhino runs open; backend writes `command.json`; `listener.py` timer executes the script; result polled back. Verified end-to-end (box 10×3×1, 4/4 postconditions). |
+| 5. GUI automation | Not needed |
+
+The listener is non-blocking (`System.Windows.Forms.Timer` held in
+`scriptcontext.sticky`) so the Rhino UI stays responsive. Setup is a one-time
+startup command in Tools > Options > General.
 
 ---
 

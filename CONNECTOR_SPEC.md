@@ -94,25 +94,50 @@ class Capability:
 | `rhino.detect` | L0 | Find Rhino 6 exe on disk. No launch. | UNKNOWN |
 | `rhino.health_check` | L0 | Is Rhino process running? Responsive? | UNKNOWN |
 | `rhino.get_version` | L0 | Read version + service release + bitness | UNKNOWN |
-| `rhino.get_document_info` | L0 | Active document path, units, object count | UNKNOWN |
-| `rhino.list_objects` | L0 | List object IDs, types, layers | UNKNOWN |
-| `rhino.create_box_test` | L1 | Create a 10×3×1 box in a **new disposable document** | UNKNOWN |
-| `rhino.inspect_object` | L0 | Read bounding box, dimensions, unit of a given object ID | UNKNOWN |
-| `rhino.export_copy` | L1 | Save document to a new `.3dm` path under `data/projects/<id>/artifacts/` | UNKNOWN |
+| `rhino.get_document_info` | L0 | Active document units + object count | VERIFIED (Alpha 0.1) |
+| `rhino.list_objects` | L0 | List object IDs, types, bounding boxes | VERIFIED (`rhino.inspect_objects`) |
+| `rhino.create_box_test` | L1 | Create a box in the active document (disposable doc not supported in 2.7) | VERIFIED (Alpha 0.1) |
+| `rhino.inspect_object` | L0 | Read bounding box, dimensions, unit of a given object ID | VERIFIED (Alpha 0.1) |
+| `rhino.export_copy` | L1 | Save document to a new `.3dm` path under `data/projects/<id>/artifacts/` | VERIFIED (Alpha 0.1) |
 | `rhino.capture_viewport` | L1 | Screenshot of current viewport to `data/projects/<id>/artifacts/` | UNKNOWN |
 
 ### Transport method
 
-**UNVERIFIED — to be resolved by Phase 0 spike S2.**
+**DECIDED (Alpha 0.1): Passive file-based listener.**
 
-Candidate methods (full comparison in `RHINO6_INTEGRATION_SPIKE.md`):
-1. RhinoCommon .NET plugin (C#)
-2. RhinoPython (embedded Python 2.7)
-3. Command-line automation (`_RunPythonScript` or `_RunCommand`)
-4. Local IPC channel (named pipe / HTTP) with in-process helper
-5. GUI automation (pywinauto) — fallback only
+The connector does **not** launch Rhino. Rhino 6 runs open with a one-time
+startup command that installs `nei/connectors/rhino6/listener.py` (a
+non-blocking `System.Windows.Forms.Timer` watching a command file). The backend
+writes `command.json` to the watch directory, the listener `execfile`s the
+generated RhinoPython 2.7 script inside the running Rhino, and the script writes
+its result JSON back, which the backend polls for.
 
-**Decision rule:** Choose the method that successfully passes the spike test (create box, read bounding box, verify dimensions) with the least fragility. Do not pre-decide.
+```
+backend (Python 3.13)                     Rhino 6 (running, manual)
+  listener_client.send_cmd(script)  ───▶  listener.py timer tick (0.5s)
+                                          execfile(script) in RhinoPython 2.7
+                                          script writes result.json ◀──┐
+  backend polls result.json        ◀───────────────────────────────────┘
+```
+
+Setup (one-time, documented in `listener.py`):
+- Rhino → Tools > Options > General > "Run these commands every time Rhino starts":
+  `_-RunPythonScript "D:\Project NEI\nei\connectors\rhino6\listener.py"`
+
+**Why not the alternatives (from `RHINO6_INTEGRATION_SPIKE.md`):**
+1. RhinoCommon .NET plugin (C#) — requires authoring/building a plugin; heavy.
+2. RhinoPython embedded 2.7 — used, but only via the listener (see below).
+3. Command-line automation (`/runscript` / `_RunPythonScript`) — **proven
+   non-viable on this machine**: 10/10 live launches timed out, Rhino exited
+   code 1 without executing; single-instance zombie absorption.
+4. Local IPC channel — the passive listener is effectively this (file-based IPC).
+5. GUI automation (pywinauto) — fallback only, not used.
+
+Key RhinoPython 2.7 API notes baked into the templates:
+- `rs.AllObjects()` (not `rs.Objects()`), `rs.coerceguid()` (returns a single GUID).
+- `rs.BoundingBox(id)` returns a list of 8 corner points → min/max are `[0]` and `[6]`.
+- `rs.UnitSystem(2)` = millimeters (2.7 codes: 1=micron, 2=mm, 3=cm, 4=m, 5=in, 6=ft).
+- Work in `Rhino.RhinoDoc.ActiveDoc`; `RhinoApp.NewDocument` is unavailable in 2.7.
 
 ### Script safety
 
