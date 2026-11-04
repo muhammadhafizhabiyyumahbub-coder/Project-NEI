@@ -86,6 +86,18 @@ Open `http://127.0.0.1:5173`.
 python -m pytest tests/ -v
 ```
 
+## E2E (Playwright)
+
+Chromium lives at `D:\playwright-browsers` (C: drive is full). Set env before running:
+
+```powershell
+$env:PLAYWRIGHT_BROWSERS_PATH="D:\playwright-browsers"
+cd apps/ui
+npx playwright test
+```
+
+Requires backend (`:8000`) and Vite dev (`:5173`) both running.
+
 ## OpenAPI Schema
 
 - Live: `GET http://127.0.0.1:8000/openapi.json`
