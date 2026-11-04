@@ -238,9 +238,54 @@ Create all pages from `FRONTEND_SPEC.md` Phase 2 section:
 - [x] Cancel task via UI → state updates
 - [x] Connector health page shows probe results
 - [x] All API types from OpenAPI
-- [ ] **Phase 2 accepted: 2026-11-04** — Playwright e2e `e2e/happy-path.spec.ts` passed (6.7s); 99/99 pytest passing
+- [x] **Phase 2 accepted: 2026-11-04** — Playwright e2e `e2e/happy-path.spec.ts` passed (6.7s); 99/99 pytest passing
 
-**Stop. Run build. Report to user. Wait for "lanjut" before Phase 3.**
+**Phase 2 selesai, semua acceptance criteria terpenuhi.**
+
+---
+
+## Phase 3 — Verification + Rhino 6 connector = Alpha 0.1
+
+**Goal:** First visible engineering workflow: create box in Rhino 6, verify from Rhino result.  
+**Status:** Core infrastructure complete, live Rhino 6 integration belum terbukti di mesin ini.
+
+### 3.0 Status (as of commit `c9e5421` — 2026-11-04)
+
+| Item | Status | Bukti |
+|---|---|---|
+| `nei/verification/` module (engine, postconditions, geometry check, record) | ✅ **terbukti** | `tests/test_verification.py` (PASSED/FAILED via API) |
+| Rhino 6 connector (spike‑selected transport Method 2) | ⚠️ **mock‑only** | `tests/test_rhino_connector.py` mock subprocess (23 tests pass) |
+| `rhino.detect`, `health_check`, `get_version`, `get_document_info`, `list_objects` | ⚠️ **mock‑only** |  |
+| `rhino.create_box_test` | ⚠️ **mock‑only** |  |
+| `rhino.inspect_object` (`inspect_objects`) | ⚠️ **mock‑only** |  |
+| `rhino.export_copy` (new `.3dm` under `data/projects/<id>/artifacts/`) | ⚠️ **mock‑only** | template + dispatch + sandbox validation tested; file ingestion tested |
+| Verification: bounding box, object count, units from **Rhino result** | ✅ **terbukti** | verification engine + postconditions (box) |
+| Artifact manifest for `.3dm` | ✅ **terbukti** | `write_manifest` + `save_artifact` (test round‑trip) |
+| LLM planner wired (external provider, privacy mode) | ✅ **terbukti** | `tests/test_planner.py` (template match, LLM fallback) |
+
+### ✅ **Yang sudah dijalankan dan lulus** (105/105 tests passing)
+
+| Test suite | Jumlah passed | Bukti |
+|---|---|---|
+| `python -m pytest tests/` | 105 | semua unit, integration, artifact, verification, planner |
+| Playwright `npm run test:e2e` | 1 | `e2e/happy-path.spec.ts` (phase 1–2 happy path) |
+| Oxlint | 0 error, 1 warning (non‑fatal) | `npx oxlint` — warning `set-state-in-effect` di `useSse.ts` |
+
+### ❌ **Yang sengaja di‑skip / belum terbukti**
+
+| Item | Alasan |
+|---|---|
+| Live Rhino 6 command‑line invocation (`Rhino.exe -b macro.rhp`) | Rhino 6 belum terpasang di mesin ini; transport method 2 (`-b` batch macro) belum di‑verify di environment asli. |
+| Rhino Python 2.7 environment availability | Tidak ada garansi RhinoPython add‑on aktif; mock subprocess dipakai. |
+| `.3dm` file generation + file‑system writes oleh Rhino | Script template valid, tapi belum dijalankan di Rhino live. |
+| SOLIDWORKS 2022 connector | Belum diimplementasi (Phase 6). |
+| Maxsurf 20 V8i connector | Belum diimplementasi (Phase 7). |
+| ANSYS | Tidak ada kode, tidak ada probe, tidak ada placeholder (sesuai konvensi). |
+| E2E Alpha 0.1 full workflow (planner → policy → execute → verify → artifact → dashboard) | Butuh live Rhino 6 untuk execute step; frontend belum di‑update untuk render artifact + script hash. |
+
+**Stop. Phase 3 infrastructure sudah siap; live integration menunggu instalasi Rhino 6. Alpha 0.1 belum bisa dicap "terpenuhi" tanpa verifikasi live Rhino.**
+
+---
 
 ---
 
