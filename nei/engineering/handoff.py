@@ -101,6 +101,19 @@ def save_handoff_file(
     )
 
 
+def validate_handoff_artifact(hop: HandoffHop, project_root: str, project_id: str) -> Path:
+    """Validate recorded artifact path and content before downstream use."""
+    path = Path(hop.file_path).resolve()
+    sandbox = (Path(project_root) / project_id).resolve()
+    if not validate_sandbox_path(str(path), str(sandbox)):
+        raise ValueError(f"Handoff artifact outside sandbox: {path}")
+    if not path.is_file() or path.stat().st_size == 0:
+        raise ValueError(f"Handoff artifact missing or empty: {path}")
+    if _sha256(path.read_bytes()) != hop.file_sha256:
+        raise ValueError(f"Handoff artifact hash mismatch: {path}")
+    return path
+
+
 def validate_transfer(
     source_bbox: tuple[float, float, float],
     target_bbox: tuple[float, float, float],

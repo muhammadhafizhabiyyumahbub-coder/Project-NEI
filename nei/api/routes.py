@@ -21,6 +21,7 @@ from nei.core.task_manager import create_task, get_task, cancel_task
 from nei.core.audit import log_event
 from nei.core.policy import risk_forbidden
 from nei.api import models
+from typing import Optional
 
 router = APIRouter()
 
@@ -382,7 +383,7 @@ async def run_task_endpoint(task_id: str):
     from nei.core.resource_manager import acquire_app_lock, release_app_lock
     from nei.core.config import settings
     from nei.verification.postconditions import rhino_box_postconditions, rhino_export_copy_postconditions
-    from nei.engineering.handoff import save_handoff_file, write_provenance_manifest, HandoffHop
+    from nei.engineering.handoff import save_handoff_file, write_provenance_manifest, validate_handoff_artifact, HandoffHop
     import json as _json
 
     task = await get_task(task_id)
@@ -490,7 +491,17 @@ async def run_task_endpoint(task_id: str):
                         unit=params.get("unit", "mm"),
                         file_format=params.get("format", "STEP"),
                     )
+                    validate_handoff_artifact(
+                        hop, task.get("path_root") or str(PROJECTS_ROOT), task["project_id"]
+                    )
                     handoff_chain.append(hop)
+
+            # Downstream steps consume only the validated previous artifact.
+            if step_idx > 0 and handoff_chain:
+                params.setdefault("input_artifact", handoff_chain[-1].file_path)
+                validate_handoff_artifact(
+                    handoff_chain[-1], task.get("path_root") or str(PROJECTS_ROOT), task["project_id"]
+                )
 
             # Keep task RUNNING until all plan steps finish. Final verification is below.
 
