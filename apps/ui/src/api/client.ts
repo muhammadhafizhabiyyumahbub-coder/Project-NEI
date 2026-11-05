@@ -52,6 +52,13 @@ export type TaskEvent = {
 
 export type Connector = { id: string; name: string; transport: string; status?: string | null };
 
+export type ConnectorCapability = {
+  name: string;
+  status: "SUPPORTED" | "UNSUPPORTED" | "UNKNOWN" | "UNAVAILABLE";
+  version_tested: string | null;
+  notes: string | null;
+};
+
 export type ProbeResult = {
   connector_id: string;
   detected: string | null;
@@ -194,6 +201,10 @@ export async function listConnectors(): Promise<Connector[]> {
 
 export async function probeConnector(id: string): Promise<ProbeResult> {
   return http(`/connectors/${id}/probe`, { method: "POST" });
+}
+
+export async function getConnectorCapabilities(id: string): Promise<{ connector_id: string; capabilities: ConnectorCapability[] }> {
+  return http(`/connectors/${id}/capabilities`);
 }
 
 // ── evidence (Phase 4) ──────────────────────────────────────────────────────

@@ -1,4 +1,6 @@
 import { useConnectors } from "../hooks/useConnectors";
+import { useQuery } from "@tanstack/react-query";
+import { getConnectorCapabilities } from "../api/client";
 
 export function Connectors() {
   const { connectors, isLoading, error, probe, isProbing } = useConnectors();
@@ -14,17 +16,30 @@ export function Connectors() {
                 <span className="font-medium">{c.name}</span>
                 <div className="text-xs text-gray-500">{c.transport}</div>
               </div>
-              <button
-                onClick={() => probe(c.id)}
-                disabled={isProbing}
-                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
-              >
-                Probe
-              </button>
+              <div className="flex gap-2 items-center">
+                {c.id === "solidworks2022" && <CapabilitySummary connectorId={c.id} />}
+                <button
+                  onClick={() => probe(c.id)}
+                  disabled={isProbing}
+                  className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
+                >
+                  Probe
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
+}
+
+function CapabilitySummary({ connectorId }: { connectorId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["connector-capabilities", connectorId],
+    queryFn: () => getConnectorCapabilities(connectorId),
+  });
+  if (isLoading) return <span className="text-xs text-gray-500">Loading capabilities...</span>;
+  const unknown = data?.capabilities.filter((c) => c.status === "UNKNOWN").length ?? 0;
+  return <span className="text-xs text-gray-500">{unknown} unknown</span>;
 }
