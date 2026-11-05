@@ -1,6 +1,6 @@
 import { useTask } from "../hooks/useTask";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, type CalculationRun } from "../api/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, getTaskEvidence, type CalculationRun } from "../api/client";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
@@ -8,6 +8,11 @@ export function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const queryClient = useQueryClient();
   const { task, isLoading, error, events } = useTask(taskId);
+  const { data: evidence = [] } = useQuery({
+    queryKey: ["task-evidence", taskId],
+    queryFn: () => getTaskEvidence(taskId!),
+    enabled: !!taskId,
+  });
   const [lastResult, setLastResult] = useState<Record<string, unknown> | null>(null);
   const [calcRun, setCalcRun] = useState<CalculationRun | null>(null);
 
@@ -116,7 +121,9 @@ export function TaskDetail() {
             <section className="output-panel"><h3>Errors</h3><pre>{task.errors_json ? (() => { try { return JSON.stringify(JSON.parse(task.errors_json), null, 2); } catch { return task.errors_json; } })() : "No errors recorded."}</pre></section>
           </div>
           <div>
-            <h3 className="font-medium mb-2">Events</h3>
+            <h3 className="font-medium mb-2">Task Evidence</h3>
+             {evidence.length === 0 ? <p className="text-gray-500">No evidence linked.</p> : <ul className="space-y-2">{evidence.map((item) => <li key={item.id} className="text-sm p-2 border rounded"><div className="flex justify-between"><span className="font-medium">{item.capability_name}</span><span className="text-gray-500">{item.evidence_type}</span></div>{item.artifact_path && <div className="text-xs text-gray-500 break-all">{item.artifact_path}</div>}{item.artifact_sha256 && <div className="text-xs font-mono text-gray-400 break-all">SHA-256: {item.artifact_sha256}</div>}{item.notes && <div className="text-xs text-gray-500">{item.notes}</div>}</li>)}</ul>}
+             <h3 className="font-medium mb-2">Events</h3>
             {events.length === 0 ? <p className="text-gray-500">No events.</p> : (
               <ul className="space-y-2">
                 {events.map((e, i) => (

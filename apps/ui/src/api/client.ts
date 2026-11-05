@@ -228,6 +228,23 @@ export async function getTaskEvents(taskId: string): Promise<TaskEvent[]> {
   return http(`/tasks/${taskId}/events_raw`);
 }
 
+export type TaskEvidence = {
+  id: string;
+  connector_id: string;
+  capability_name: string;
+  evidence_type: string;
+  artifact_path: string | null;
+  artifact_sha256: string | null;
+  metadata: Record<string, unknown> | null;
+  verified_at: string;
+  verified_by: string;
+  notes: string | null;
+};
+
+export async function getTaskEvidence(taskId: string): Promise<TaskEvidence[]> {
+  return http(`/tasks/${taskId}/evidence`);
+}
+
 // ── connectors ──────────────────────────────────────────────────────────────
 export async function listConnectors(): Promise<Connector[]> {
   return http("/connectors");

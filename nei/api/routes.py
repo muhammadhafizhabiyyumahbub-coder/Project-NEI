@@ -137,6 +137,26 @@ async def get_task_endpoint(task_id: str):
     return task
 
 
+@router.get("/tasks/{task_id}/evidence")
+async def task_evidence(task_id: str):
+    """Return connector evidence linked to task execution."""
+    async with get_db() as db:
+        task = await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,))
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        rows = await db.execute_fetchall(
+            """SELECT id, connector_id, capability_name, evidence_type, artifact_path,
+                      artifact_sha256, metadata_json, verified_at, verified_by, notes
+               FROM connector_evidence WHERE json_extract(metadata_json, '$.task_id') = ?
+               ORDER BY verified_at DESC""", (task_id,))
+    return [{
+        "id": r[0], "connector_id": r[1], "capability_name": r[2],
+        "evidence_type": r[3], "artifact_path": r[4], "artifact_sha256": r[5],
+        "metadata": json.loads(r[6]) if r[6] else None, "verified_at": r[7],
+        "verified_by": r[8], "notes": r[9],
+    } for r in rows]
+
+
 @router.get("/tasks/{task_id}/events_raw")
 async def task_events_raw(task_id: str):
     """State timeline for task detail page (reads task_events)."""
