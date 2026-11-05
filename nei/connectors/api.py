@@ -40,6 +40,35 @@ def _capability_dict(capability):
 CONNECTORS = _registered_connectors()
 
 
+@router.get("/capabilities")
+async def list_capabilities():
+    """Return capability status, including internal deterministic actions."""
+    capabilities = [{
+        "name": "hull.preview_calculation",
+        "status": "SUPPORTED",
+        "version_tested": "NEI deterministic engine",
+        "notes": "Unit-safe preview only; no CAD artifact generated.",
+    }]
+    for connector in CONNECTORS:
+        cls = get_connector_class(connector["id"])
+        if cls is None:
+            continue
+        from nei.core.config import settings
+        kwargs = {}
+        if connector["id"] == "solidworks2022":
+            kwargs["exe_path"] = settings.solidworks_exe_path
+        elif connector["id"] == "rhino6":
+            kwargs["rhino_exe"] = settings.rhino_exe_path
+        for item in cls(**kwargs).get_capabilities():
+            capabilities.append({"connector_id": connector["id"], **_capability_dict(item)})
+    capabilities.extend([
+        {"connector_id": "maxsurf20", "name": "maxsurf.hull_generation", "status": "UNKNOWN", "version_tested": None, "notes": "No validated hull-generation artifact test."},
+        {"connector_id": "rhino6", "name": "rhino.hull_generation", "status": "UNKNOWN", "version_tested": None, "notes": "No validated hull-generation artifact test."},
+        {"connector_id": "solidworks2022", "name": "solidworks.hull_generation", "status": "UNSUPPORTED", "version_tested": None, "notes": "Connector supports inspection/safe operations only."},
+    ])
+    return {"capabilities": capabilities}
+
+
 @router.get("/connectors")
 async def list_connectors():
     """Static connector registry. Detect/probe fields filled by probe call."""

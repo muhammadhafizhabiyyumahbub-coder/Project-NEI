@@ -364,7 +364,7 @@ async def get_formula(formula_id: str) -> Optional[dict]:
 
 async def list_formulas(domain: Optional[str] = None,
                         status: Optional[str] = None) -> list[dict]:
-    sql = "SELECT id, name, domain, equation_text, review_status, version, created_at FROM formulas"
+    sql = "SELECT id, name, domain, equation_text, review_status, version, created_at, variables_json, canonical_units FROM formulas"
     conds, params = [], []
     if domain:
         conds.append("domain = ?")
@@ -377,11 +377,18 @@ async def list_formulas(domain: Optional[str] = None,
     sql += " ORDER BY created_at DESC"
     async with get_db() as db:
         rows = await db.execute_fetchall(sql, params)
-    return [
-        {"id": r[0], "name": r[1], "domain": r[2], "equation_text": r[3],
-         "review_status": r[4], "version": r[5], "created_at": r[6]}
-        for r in rows
-    ]
+    formulas = []
+    for r in rows:
+        variables = json.loads(r[7]) if r[7] else []
+        if not variables:
+            from nei.engineering.calculator import FORMULA_REGISTRY
+            impl = FORMULA_REGISTRY.get(r[1])
+            if impl:
+                variables = [{"name": name, "unit": impl.get("param_units", {}).get(name, "SI")} for name in impl["param_names"]]
+        formulas.append({"id": r[0], "name": r[1], "domain": r[2], "equation_text": r[3],
+                         "review_status": r[4], "version": r[5], "created_at": r[6],
+                         "variables": variables, "canonical_units": r[8] or "SI"})
+    return formulas
 
 
 async def advance_formula(formula_id: str, to_status: str,

@@ -77,6 +77,13 @@ async def create_task_endpoint(project_id: str, task: models.TaskCreate):
         raise HTTPException(status_code=404, detail="Project not found")
     if risk_forbidden(task.risk_level):
         raise HTTPException(status_code=400, detail="L3 risk level disallowed in Alpha 0.1")
+    if task.task_type == "hull_design":
+        from nei.engineering.hull import HullDesignRequest
+        try:
+            hull = HullDesignRequest.model_validate(task.hull_design or {})
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid hull design: {exc}") from exc
+        task.user_request = f"Design {hull.vessel_type} hull: LOA {hull.loa} m, beam {hull.beam} m, depth {hull.depth} m, draft {hull.draft} m, speed {hull.speed} kn."
 
     created = await create_task(
         project_id=project_id,
@@ -84,6 +91,7 @@ async def create_task_endpoint(project_id: str, task: models.TaskCreate):
         task_type=task.task_type,
         domain=task.domain,
         risk_level=task.risk_level,
+        hull_design=task.hull_design,
     )
     async with get_db() as db:
         await log_event(db, task_id=created["id"], event_type="TASK_CREATED",
@@ -398,11 +406,23 @@ async def run_task_endpoint(task_id: str):
     await transition_task(task_id, "start_planning", TaskStatus.PLANNING)
 
     # Step 2: Run planner
-    plan = plan_task(task["user_request"], task["task_type"])
+    hull_design = None
+    if task["task_type"] == "hull_design" and task.get("hull_design_json"):
+        hull_design = json.loads(task["hull_design_json"])
+    plan = plan_task(task["user_request"], task["task_type"], hull_design)
     if not plan.steps:
         await transition_task(task_id, "needs_input", TaskStatus.NEEDS_INPUT)
         raise HTTPException(status_code=400,
                             detail=f"Planner needs input: {plan.required_inputs}")
+
+    # Step 2b: Hull design preview — deterministic calculation, no connector claim.
+    if task["task_type"] == "hull_design" and hull_design:
+        from nei.engineering.hull import HullDesignRequest, hull_preview, record_hull_run
+        hull = HullDesignRequest.model_validate(hull_design)
+        preview = hull_preview(hull)
+        run_id = await record_hull_run(task_id, hull, preview)
+        plan.notes = f"Preview recorded {run_id}: {preview['calculations']}"
+
 
     # Step 3: Validate complete plan before executing any step.
     for planned_step in plan.steps:
@@ -441,9 +461,9 @@ async def run_task_endpoint(task_id: str):
         params = dict(step.params)
 
         # Step 6: QUEUED → RUNNING (acquire app lock first per resource policy)
-        connector_id = action.split(".")[0]
+        connector_id = "hull_preview" if action == "hull.preview_calculation" else action.split(".")[0]
         connector_id = {"rhino": "rhino6"}.get(connector_id, connector_id)
-        lock_acquired = acquire_app_lock(connector_id, task_id, timeout_s=60.0)
+        lock_acquired = True if action == "hull.preview_calculation" else acquire_app_lock(connector_id, task_id, timeout_s=60.0)
         if not lock_acquired:
             # Task stays in QUEUED; user can retry or cancel. No state corruption.
             raise HTTPException(
@@ -455,6 +475,17 @@ async def run_task_endpoint(task_id: str):
             # Step 6b: QUEUED → RUNNING once; later steps remain RUNNING.
             if step_idx == 0:
                 await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
+
+            # Hull preview calculation: deterministic calc, no connector claim
+            if action == "hull.preview_calculation":
+                from nei.engineering.hull import HullDesignRequest, hull_preview, record_hull_run
+                hull = HullDesignRequest.model_validate(hull_design)
+                result = hull_preview(hull)
+                run_id = await record_hull_run(task_id, hull, result)
+                async with get_db() as db:
+                    await db.execute("UPDATE tasks SET calc_run_ids = ? WHERE id = ?", (_json.dumps([run_id]), task_id))
+                    await db.commit()
+                continue
 
             # Step 7: Resolve connector from registry
             cls = get_connector_class(connector_id)
@@ -546,11 +577,16 @@ async def run_task_endpoint(task_id: str):
             # Keep task RUNNING until all plan steps finish. Final verification is below.
 
         finally:
-            release_app_lock(connector_id, task_id)
+            if action != "hull.preview_calculation":
+                release_app_lock(connector_id, task_id)
 
     # Final verification runs once after every step, preserving multi-step state flow.
     await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING, {"steps": len(plan.steps)})
     from nei.core.task_manager import verify_task
+    if plan.steps[-1].action == "hull.preview_calculation":
+        final_result = result
+        await verify_task(task_id, final_result, "NEI deterministic preview", [])
+        return await get_task(task_id)
     final_result = result.data
     if plan.steps[-1].action == "rhino.create_box_test":
         final_conditions = rhino_box_postconditions(

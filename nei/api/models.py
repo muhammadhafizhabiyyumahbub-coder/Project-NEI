@@ -21,6 +21,7 @@ class TaskCreate(BaseModel):
     task_type: str = "geometry"
     domain: str = "naval_architecture"
     risk_level: str = "L0"
+    hull_design: Optional[dict[str, Any]] = None
 
 
 class Task(TaskCreate):
@@ -30,6 +31,8 @@ class Task(TaskCreate):
     plan_json: Optional[str] = None
     verification_json: Optional[str] = None
     errors_json: Optional[str] = None
+    calc_run_ids: Optional[str] = None
+    hull_design_json: Optional[str] = None
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

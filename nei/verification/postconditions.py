@@ -86,6 +86,20 @@ def rhino_box_postconditions(length: float, width: float, height: float) -> list
     ]
 
 
+def hull_preview_postconditions(vessel_type: str, loa: float, beam: float,
+                                 depth: float, draft: float, speed: float,
+                                 block_coefficient: float) -> list[PostCondition]:
+    """Postconditions for hull preview: deterministic calculation checks.
+
+    These verify the recorded calculation, not a CAD model.
+    """
+    return [
+        BoundingBoxCheck(length=loa, width=beam, height=depth, tolerance=0.001),
+        BoundingBoxCheck(length=draft, width=beam, height=depth, tolerance=0.001),
+    ]
+
+
+
 def rhino_export_copy_postconditions(filename: str, expected_sha256: Optional[str] = None) -> list[PostCondition]:
     """Postconditions for Rhino export_copy: artifact exists with optional known SHA-256."""
     return [

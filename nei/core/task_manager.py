@@ -25,16 +25,17 @@ async def create_task(
     task_type: str = "geometry",
     domain: str = "naval_architecture",
     risk_level: str = "L0",
+    hull_design: Optional[dict] = None,
 ) -> dict:
     """Create a task in PENDING state and record the transition."""
     task_id = _sha256(f"{project_id}:{user_request}:{_now()}")
     now = _now()
     async with get_db() as db:
         await db.execute(
-            """INSERT INTO tasks (id, project_id, user_request, task_type, domain, risk_level, state, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO tasks (id, project_id, user_request, task_type, domain, risk_level, state, created_at, hull_design_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (task_id, project_id, user_request, task_type, domain, risk_level,
-             TaskStatus.PENDING.value, now),
+             TaskStatus.PENDING.value, now, json.dumps(hull_design) if hull_design else None),
         )
         await db.execute(
             """INSERT INTO task_events (task_id, from_state, to_state, event, metadata_json, timestamp)
@@ -62,6 +63,7 @@ async def get_task(task_id: str) -> Optional[dict]:
         "warnings_json": row[17], "connector_id": row[18],
         "verification_json": row[19], "schema_version": row[20],
         "created_at": row[21], "started_at": row[22], "completed_at": row[23],
+        "hull_design_json": row[24],
     }
 
 

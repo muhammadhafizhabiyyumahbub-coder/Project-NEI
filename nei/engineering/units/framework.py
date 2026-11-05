@@ -42,7 +42,8 @@ UNIT_TO_M = {
 UNIT_TO_KG = {"kg": 1.0, "ton": 1000.0, "tonne": 1000.0}
 UNIT_TO_M3 = {"m^3": 1.0, "mm^3": 1e-9, "cm^3": 1e-6}
 UNIT_TO_PA = {"Pa": 1.0, "kPa": 1e3, "MPa": 1e6, "bar": 1e5}
-UNIT_TO_KGM3 = {"kg/m^3": 1.0}
+UNIT_TO_KGM3 = {"kg/m^3": 1.0, "kg/m²^3": 1.0, "kg/m^2^3": 1.0, "kg/m³": 1.0}
+UNIT_TO_MS2 = {"m/s^2": 1.0, "m/s²": 1.0}
 
 
 def parse_quantity(value: str, target_unit: str = "m") -> float:
@@ -70,6 +71,16 @@ def parse_quantity(value: str, target_unit: str = "m") -> float:
         if unit not in UNIT_TO_PA:
             raise ValueError(f"Unknown pressure unit: {unit!r}")
         return num * UNIT_TO_PA[unit]
+
+    if target_unit in {"kg/m^3", "kg/m³"}:
+        if unit not in UNIT_TO_KGM3:
+            raise ValueError(f"Unknown density unit: {unit!r}")
+        return num * UNIT_TO_KGM3[unit]
+
+    if target_unit in {"m/s^2", "m/s²"}:
+        if unit not in UNIT_TO_MS2:
+            raise ValueError(f"Unknown acceleration unit: {unit!r}")
+        return num * UNIT_TO_MS2[unit]
 
     raise ValueError(f"Unsupported target unit: {target_unit}")
 

@@ -1,14 +1,23 @@
 import { useTask } from "../hooks/useTask";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { cancelTask, executeTask, verifyTask, runTask } from "../api/client";
+import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, type CalculationRun } from "../api/client";
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const queryClient = useQueryClient();
   const { task, isLoading, error, events } = useTask(taskId);
   const [lastResult, setLastResult] = useState<Record<string, unknown> | null>(null);
+  const [calcRun, setCalcRun] = useState<CalculationRun | null>(null);
+
+  useEffect(() => {
+    if (!task?.calc_run_ids) return;
+    try {
+      const ids = JSON.parse(task.calc_run_ids) as string[];
+      if (ids[0]) getCalculationRun(ids[0]).then(setCalcRun).catch(() => setCalcRun(null));
+    } catch { setCalcRun(null); }
+  }, [task?.calc_run_ids]);
 
   const { mutate: cancel, isPending: isCancelling } = useMutation({
     mutationFn: cancelTask,
@@ -61,7 +70,9 @@ export function TaskDetail() {
           </div>
 
           <div className="mb-4 p-4 border rounded">
-            <h3 className="font-medium mb-2">Run Action</h3>
+            <h3 className="font-medium mb-2">Workflow controls</h3>
+            <p className="text-sm text-gray-500 mb-3">Run Full Flow executes planning, connector action, and verification for this pending task. Other buttons run one connector operation only; they do not complete the full task flow.</p>
+            <div className="workflow-steps" aria-label="Task workflow"><span className={task.state === "pending" ? "active" : ""}>1. Pending</span><span className={task.state === "planning" ? "active" : ""}>2. Planning</span><span className={task.state === "running" ? "active" : ""}>3. Running</span><span className={task.state === "verifying" ? "active" : ""}>4. Verifying</span><span className={task.state === "completed" ? "active" : ""}>5. Completed</span></div>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => runTaskFull()}
@@ -99,6 +110,11 @@ export function TaskDetail() {
             )}
           </div>
 
+          <div className="task-output-grid">
+            <section className="output-panel"><h3>Hull Preview</h3>{task.task_type === "hull_design" ? <pre>{calcRun ? JSON.stringify({ status: calcRun.status, inputs: calcRun.inputs, result: calcRun.result }, null, 2) : task.plan_json ? (() => { try { const plan = JSON.parse(task.plan_json); return plan.notes || "Hull calculation pending"; } catch { return "Hull data parsing error"; } })() : "No hull data."}</pre> : <span className="quiet-text">Not a hull design task.</span>}</section>
+            <section className="output-panel"><h3>Plan</h3><pre>{task.plan_json ? (() => { try { return JSON.stringify(JSON.parse(task.plan_json), null, 2); } catch { return task.plan_json; } })() : "No plan recorded yet."}</pre></section>
+            <section className="output-panel"><h3>Errors</h3><pre>{task.errors_json ? (() => { try { return JSON.stringify(JSON.parse(task.errors_json), null, 2); } catch { return task.errors_json; } })() : "No errors recorded."}</pre></section>
+          </div>
           <div>
             <h3 className="font-medium mb-2">Events</h3>
             {events.length === 0 ? <p className="text-gray-500">No events.</p> : (

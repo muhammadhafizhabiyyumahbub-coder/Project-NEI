@@ -81,7 +81,7 @@ def _load_standard_formulas():
     register_formula("hydrostatic_pressure", hyd.hydrostatic_pressure,
                      ["density", "g", "depth"],
                      "P = rho*g*h",
-                     param_units={"density": "kg/m^3", "depth": "m"},
+                     param_units={"density": "kg/m^3", "g": "m/s^2", "depth": "m"},
                      domain="hydrostatics")
 
 

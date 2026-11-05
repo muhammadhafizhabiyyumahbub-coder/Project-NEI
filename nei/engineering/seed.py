@@ -37,8 +37,9 @@ async def seed_builtin_formulas() -> list[dict]:
                     created_at, change_log_json)
                 VALUES (?, ?, ?, ?, ?, ?, 'SI', ?, ?, ?, ?, ?, 1, ?, ?)""",
                 (fid, name, domain, impl["description"], f"builtin:{name}",
+                 json.dumps([{"name": param, "unit": impl.get("param_units", {}).get(param, "SI")} for param in impl["param_names"]]),
                  json.dumps([]), json.dumps([]), json.dumps([]), json.dumps([]),
-                 json.dumps([]), "APPROVED_FOR_USE", now,
+                 "APPROVED_FOR_USE", now,
                  json.dumps([{"ts": now, "event": "seeded built-in formula"}])),
             )
             out.append({"id": fid, "name": name, "domain": domain})
@@ -47,7 +48,5 @@ async def seed_builtin_formulas() -> list[dict]:
 
 
 async def ensure_built_in_formulas() -> None:
-    """Seed built-in formulas; no-op if anything is already present."""
-    if await list_formulas():
-        return
+    """Ensure every built-in formula exists without changing existing rows."""
     await seed_builtin_formulas()

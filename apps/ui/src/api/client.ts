@@ -30,6 +30,8 @@ export type Task = {
   plan_json: string | null;
   verification_json: string | null;
   errors_json: string | null;
+  calc_run_ids: string | null;
+  hull_design_json: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
@@ -40,6 +42,15 @@ export type TaskCreate = {
   task_type?: string;
   domain?: string;
   risk_level?: string;
+  hull_design?: {
+    vessel_type: string;
+    loa: number;
+    beam: number;
+    depth: number;
+    draft: number;
+    speed: number;
+    block_coefficient?: number;
+  };
 };
 
 export type TaskEvent = {
@@ -100,6 +111,8 @@ export type Formula = {
   review_status: string;
   version: number;
   created_at: string;
+  variables?: Array<Record<string, unknown>>;
+  canonical_units?: string;
 };
 
 export type CalcRun = {
@@ -139,6 +152,12 @@ export async function getHealth(): Promise<{ status: string; db: boolean; timest
 }
 
 // ── projects ───────────────────────────────────────────────────────────────
+export type Capability = { name: string; status: string; connector_id?: string; version_tested?: string | null; notes?: string | null };
+
+export async function listCapabilities(): Promise<{ capabilities: Capability[] }> {
+  return http("/capabilities");
+}
+
 export async function listProjects(): Promise<Project[]> {
   return http("/projects");
 }
@@ -158,6 +177,21 @@ export async function listProjectTasks(projectId: string): Promise<Task[]> {
 
 export async function getTask(taskId: string): Promise<Task> {
   return http(`/tasks/${taskId}`);
+}
+
+export type CalculationRun = {
+  id: string;
+  task_id: string;
+  formula_id: string;
+  inputs: Record<string, unknown>;
+  result: Record<string, unknown>;
+  status: string;
+  trace: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function getCalculationRun(runId: string): Promise<CalculationRun> {
+  return http(`/calculations/${runId}`);
 }
 
 export async function cancelTask(taskId: string): Promise<Task> {

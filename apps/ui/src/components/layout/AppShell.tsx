@@ -29,8 +29,10 @@ export function AppShell() {
             <h1 className="text-lg font-bold">NEI</h1>
           )}
           <button
+            type="button"
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground"
+            className="shell-toggle"
           >
             {collapsed ? "→" : "←"}
           </button>

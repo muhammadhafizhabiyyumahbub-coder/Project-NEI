@@ -65,14 +65,29 @@ def _is_handoff_request(user_request: str) -> bool:
     return bool(m) or ("handoff" in user_request.lower() or "transfer" in user_request.lower())
 
 
-def plan_task(user_request: str, task_type: str = "geometry") -> Plan:
+def plan_task(user_request: str, task_type: str = "geometry", hull_design: Optional[dict] = None) -> Plan:
     """Produce a structured plan for a user request.
 
     Alpha 0.1:
     - Box creation in Rhino 6 → single-step plan with L1 risk
-    - Phase 8: cross-software handoff → 3-step chain (export → import → verify)
-    - Anything else → fallback step with note (LLM decides here in full mode)
+    - Hull design → preview calculation only, no connector claim
+    - Phase 8: cross-software handoff → 3-step chain
+    - Anything else → fallback step with note
     """
+    if task_type == "hull_design" and hull_design:
+        from nei.engineering.hull import HullDesignRequest, hull_preview
+        try:
+            hull = HullDesignRequest.model_validate(hull_design)
+            preview = hull_preview(hull)
+        except Exception as e:
+            return Plan(task_type="hull_design", steps=[], notes=f"Hull validation failed: {e}")
+        return Plan(
+            task_type="hull_design",
+            steps=[
+                PlanStep("hull.preview_calculation", "L0", hull_design),
+            ],
+            notes=f"Preview only: displacement {preview['calculations']['displacement_volume_m3']:.1f} m³, Fn {preview['calculations']['froude_number']:.3f}. No connector claimed.",
+        )
     if _is_handoff_request(user_request):
         m = HANDOFF_PATTERN.search(user_request)
         if m:
