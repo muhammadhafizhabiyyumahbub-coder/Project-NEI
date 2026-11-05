@@ -6,7 +6,7 @@ def test_citation_exact_location():
     chunk = {"page": 45, "section": "3.2.1", "clause": "A", "equation_no": "2"}
     source = {"title": "Stability Manual", "edition": "2nd", "year": 2020}
     assert build_citation(chunk, source) == (
-        "Stability Manual, 2nd, 2020 (Section 3.2.1, Clause A, Eq. 2, p. 45)"
+        "Stability Manual, 2nd, 2020 (3.2.1, Clause A, Eq. 2, p. 45)"
     )
 
 
@@ -27,4 +27,4 @@ def test_citation_page_only():
 def test_citation_no_title():
     chunk = {"section": "1.1"}
     source = {"title": None, "edition": None, "year": None}
-    assert build_citation(chunk, source) == "Unknown source (Section 1.1)"
+    assert build_citation(chunk, source) == "Unknown source (1.1)"

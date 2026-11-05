@@ -20,7 +20,8 @@ def build_citation(chunk: dict, source: dict) -> str:
 
     # Location part: only fields the chunk actually has
     loc: list[str] = []
-    _append(loc, "Section {}", chunk.get("section"))
+    if chunk.get("section"):
+        loc.append(chunk["section"])
     _append(loc, "Clause {}", chunk.get("clause"))
     _append(loc, "Eq. {}", chunk.get("equation_no"))
     if chunk.get("page") is not None:
