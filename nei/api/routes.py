@@ -417,48 +417,61 @@ async def run_task_endpoint(task_id: str):
     # Step 5: VALIDATING → QUEUED
     await transition_task(task_id, "validating_complete", TaskStatus.QUEUED)
 
-    # Step 6: QUEUED → RUNNING
-    await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
-
-    # Step 7: Execute connector action
-    conn = Rhino6Connector()
-    result = conn.execute(action, params, timeout_s=60)
-
-    async with get_db() as db:
-        await db.execute(
-            "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
-            (_json.dumps({"action": action, "params": params, "result": result.__dict__}),
-             _json.dumps({"rhino6": conn.get_version() or "unknown"}), task_id),
+    # Step 6: Acquire app lock before transitioning to RUNNING
+    from nei.core.resource_manager import acquire_app_lock, release_app_lock
+    lock_acquired = acquire_app_lock("rhino6", task_id, timeout_s=60.0)
+    if not lock_acquired:
+        # Task stays in QUEUED; user can retry or cancel. No state corruption.
+        raise HTTPException(
+            status_code=503,
+            detail="Another task is using Rhino 6. Task remains in QUEUED. Retry or cancel.",
         )
-        await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
-                        detail_json={"action": action, "params": params,
-                                     "success": result.success})
-        await db.commit()
 
-    if not result.success:
-        await transition_task(task_id, "execution_failed", TaskStatus.FAILED,
-                              {"error": result.error})
-        raise HTTPException(status_code=500, detail=result.error)
-
-    # Step 8: RUNNING → VERIFYING
-    await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING,
-                          {"success": True})
-
-    # Step 9: Run verification postconditions
-    if action == "rhino.create_box_test":
-        pcs = rhino_box_postconditions(params.get("length", 10.0),
-                                       params.get("width", 3.0),
-                                       params.get("height", 1.0))
-    else:
-        pcs = []
-
-    from nei.core.task_manager import verify_task
     try:
-        await verify_task(task_id, result.data, conn.get_version() or "unknown", pcs)
-    except Exception as e:
+        # Step 6b: QUEUED → RUNNING
+        await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
+
+        # Step 7: Execute connector action
+        conn = Rhino6Connector()
+        result = conn.execute(action, params, timeout_s=60)
+
         async with get_db() as db:
-            await log_event(db, task_id=task_id, event_type="VERIFY_ERROR",
-                            detail_json={"error": str(e)})
+            await db.execute(
+                "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
+                (_json.dumps({"action": action, "params": params, "result": result.__dict__}),
+                 _json.dumps({"rhino6": conn.get_version() or "unknown"}), task_id),
+            )
+            await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
+                            detail_json={"action": action, "params": params,
+                                        "success": result.success})
             await db.commit()
 
-    return await get_task(task_id)
+        if not result.success:
+            await transition_task(task_id, "execution_failed", TaskStatus.FAILED,
+                                  {"error": result.error})
+            raise HTTPException(status_code=500, detail=result.error)
+
+        # Step 8: RUNNING → VERIFYING
+        await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING,
+                              {"success": True})
+
+        # Step 9: Run verification postconditions
+        if action == "rhino.create_box_test":
+            pcs = rhino_box_postconditions(params.get("length", 10.0),
+                                           params.get("width", 3.0),
+                                           params.get("height", 1.0))
+        else:
+            pcs = []
+
+        from nei.core.task_manager import verify_task
+        try:
+            await verify_task(task_id, result.data, conn.get_version() or "unknown", pcs)
+        except Exception as e:
+            async with get_db() as db:
+                await log_event(db, task_id=task_id, event_type="VERIFY_ERROR",
+                                detail_json={"error": str(e)})
+                await db.commit()
+
+        return await get_task(task_id)
+    finally:
+        release_app_lock("rhino6", task_id)

@@ -8,8 +8,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from nei.core.database import get_db
+from nei.connectors.registry import get_connector_class
 
 router = APIRouter()
+
+
+def _connector_meta(connector_id: str) -> dict:
+    cls = get_connector_class(connector_id)
+    if cls is None:
+        return {"id": connector_id, "name": connector_id, "transport": "unknown"}
+    return {"id": connector_id, "name": cls.name, "transport": getattr(cls, "transport", "unknown")}
+
+
+def _registered_connectors() -> list[dict]:
+    from nei.connectors.registry import registry
+    out = []
+    for cls in registry():
+        out.append({"id": cls.connector_id, "name": cls.name, "transport": getattr(cls, "transport", "unknown")})
+    return out
 
 
 def _capability_dict(capability):
@@ -21,11 +37,7 @@ def _capability_dict(capability):
     }
 
 
-CONNECTORS = [
-    {"id": "rhino6", "name": "Rhino 6", "transport": "RhinoPython Method 2"},
-    {"id": "solidworks2022", "name": "SOLIDWORKS 2022", "transport": "COM"},
-    {"id": "maxsurf20", "name": "Maxsurf 20 V8i", "transport": "file exchange"},
-]
+CONNECTORS = _registered_connectors()
 
 
 @router.get("/connectors")
@@ -54,18 +66,20 @@ async def get_connector(connector_id: str):
 @router.get("/connectors/{connector_id}/capabilities")
 async def connector_capabilities(connector_id: str):
     """Return version-tested capability status without activating CAD software."""
+    from nei.core.config import settings
+
+    cls = get_connector_class(connector_id)
+    if cls is None:
+        raise HTTPException(status_code=404, detail="Capability report unavailable")
+
+    kwargs = {}
     if connector_id == "solidworks2022":
-        from nei.connectors.solidworks2022 import SolidWorks2022Connector
-        from nei.core.config import settings
-        conn = SolidWorks2022Connector(settings.solidworks_exe_path)
-        return {"connector_id": connector_id,
-                "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
-    if connector_id == "maxsurf20":
-        from nei.connectors.maxsurf20 import Maxsurf20Connector
-        conn = Maxsurf20Connector()
-        return {"connector_id": connector_id,
-                "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
-    raise HTTPException(status_code=404, detail="Capability report unavailable")
+        kwargs["exe_path"] = settings.solidworks_exe_path
+    elif connector_id == "rhino6":
+        kwargs["rhino_exe"] = settings.rhino_exe_path
+    conn = cls(**kwargs)
+    return {"connector_id": connector_id,
+            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
 
 
 @router.get("/connectors/{connector_id}/inspect")
@@ -93,86 +107,54 @@ async def inspect_connector(connector_id: str, operation: str = "document_info")
 
 @router.post("/connectors/{connector_id}/probe")
 async def probe_connector(connector_id: str):
-    """Probe a connector: real detect/version for rhino6, mock for others."""
-    from nei.connectors.rhino6 import Rhino6Connector
+    """Probe a registered connector: detect/version/capabilities.
+
+    Per-connector instantiation logic lives in each connector class; the
+    generic path here works for any connector that implements BaseConnector.
+    SOLIDWORKS additionally reports its COM attach status.
+    """
     from nei.core.config import settings
 
-    if connector_id == "solidworks2022":
-        from nei.connectors.solidworks2022 import SolidWorks2022Connector
-        from nei.core.config import settings
-        conn = SolidWorks2022Connector(settings.solidworks_exe_path)
-        det = conn.detect()
-        ts = datetime.now(timezone.utc).isoformat()
-        status = "DETECTED" if det.detected else "NOT_FOUND"
-        async with get_db() as db:
-            await db.execute(
-                "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) VALUES (?, ?, ?, ?, ?, ?)",
-                (connector_id, conn.name, status, ts, det.version, det.exe_path),
-            )
-            await db.commit()
-        com = conn.com_probe()
-        return {
-            "connector_id": connector_id, "detected": det.detected,
-            "version": det.version, "exe_path": det.exe_path,
-            "probe_ts": ts, "note": det.notes,
-            "com": com,
-            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
-        }
-
-    if connector_id == "maxsurf20":
-        from nei.connectors.maxsurf20 import Maxsurf20Connector
-        conn = Maxsurf20Connector()
-        det = conn.detect()
-        ts = datetime.now(timezone.utc).isoformat()
-        status = "DETECTED" if det.detected else "NOT_FOUND"
-        async with get_db() as db:
-            await db.execute(
-                "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) VALUES (?, ?, ?, ?, ?, ?)",
-                (connector_id, conn.name, status, ts, det.version, det.exe_path),
-            )
-            await db.commit()
-        return {
-            "connector_id": connector_id, "detected": det.detected,
-            "version": det.version, "exe_path": det.exe_path,
-            "probe_ts": ts, "note": det.notes,
-            "com": None,
-            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
-        }
-
-    if connector_id != "rhino6":
+    cls = get_connector_class(connector_id)
+    if cls is None:
         return await _mock_probe(connector_id)
 
-    conn = Rhino6Connector(rhino_exe=settings.rhino_exe_path)
+    # Resolve the connector instance (SOLIDWORKS/Maxsurf take an optional exe path).
+    kwargs = {}
+    if connector_id == "solidworks2022":
+        kwargs["exe_path"] = settings.solidworks_exe_path
+    elif connector_id == "rhino6":
+        kwargs["rhino_exe"] = settings.rhino_exe_path
+    conn = cls(**kwargs)
+
     det = conn.detect()
     version = conn.get_version()
     ts = datetime.now(timezone.utc).isoformat()
-
     status = "DETECTED" if det.detected else "NOT_FOUND"
     async with get_db() as db:
-        rows = await db.execute_fetchall(
-            "SELECT id FROM connectors WHERE id = ?", (connector_id,))
-        if not rows:
-            await db.execute(
-                "INSERT INTO connectors (id, name, status, last_probe_ts, version, exe_path) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (connector_id, "Rhino 6", status, ts, version,
-                 det.exe_path if det.detected else None),
-            )
-        else:
-            await db.execute(
-                "UPDATE connectors SET status = ?, last_probe_ts = ?, version = ?, exe_path = ? WHERE id = ?",
-                (status, ts, version,
-                 det.exe_path if det.detected else None, connector_id),
-            )
+        await db.execute(
+            "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (connector_id, conn.name, status, ts, version,
+             det.exe_path if det.detected else None),
+        )
         await db.commit()
-    return {
+
+    response = {
         "connector_id": connector_id,
         "detected": det.detected,
         "version": version,
         "exe_path": det.exe_path if det.detected else None,
         "probe_ts": ts,
-        "note": "Rhino 6 probe (RhinoPython Method 2)." if det.detected else "Rhino 6 not found at configured path.",
+        "note": det.notes,
+        "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
     }
+
+    # SOLIDWORKS reports COM attach status alongside the filesystem probe.
+    if connector_id == "solidworks2022" and hasattr(conn, "com_probe"):
+        response["com"] = conn.com_probe()
+
+    return response
 
 
 async def _mock_probe(connector_id: str) -> dict:
