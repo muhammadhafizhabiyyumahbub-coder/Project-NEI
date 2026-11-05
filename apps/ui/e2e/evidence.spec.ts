@@ -42,6 +42,8 @@ test.describe('Phase 4 evidence UI', () => {
     await page.fill('input[placeholder="Search evidence..."]', 'metacentric');
     await page.click('button:has-text("Search")');
     await expect(page.locator('h3:has-text("Results")').first()).toBeVisible();
+    // citation field is rendered in monospace font-mono div
+    await expect(page.locator('div.font-mono').first()).toBeVisible();
   });
 
   test('evidence sidebar link is present', async ({ page }) => {

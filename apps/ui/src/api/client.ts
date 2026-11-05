@@ -82,6 +82,7 @@ export type EvidenceSearchResult = {
   source_id: string;
   source_title: string;
   verification_status: string;
+  citation?: string;
 };
 
 export type Formula = {
