@@ -70,28 +70,33 @@ NEI is a local-first engineering assistant for naval architecture and marine eng
 
 | Module | Location | Responsibility | Phase |
 |--------|----------|--------------|-------|
-| API routes | `apps/api/` | HTTP interface, validation, auth check | 1 |
-| Orchestrator | `nei/core/orchestrator.py` | Interpret request, build plan, dispatch | 1 |
+| API routes | `nei/api/` | HTTP interface, validation, auth check | 1 |
+| Orchestrator | `nei/api/routes.py` (run_task) | Interpret request, build plan, dispatch | 1 |
 | Planner | `nei/core/planner.py` | Structured plan generation (template + LLM) | 1 |
 | Task manager | `nei/core/task_manager.py` | Task lifecycle, state transitions | 1 |
 | State machine | `nei/core/state_machine.py` | Transition table, guards, audit | 1 |
-| Tool router | `nei/core/tool_router.py` | Route steps to registered tools | 1 |
-| Policy gate | `nei/execution/policy.py` | Risk level check, path validation | 1 |
-| Approvals | `nei/execution/approvals.py` | Human approval workflow | 1 |
-| Resource manager | `nei/execution/resource_manager.py` | Per-app locks, concurrent limit | 1 |
+| Tool router | `nei/connectors/router.py` | Route steps to registered tools | 1 |
+| Policy gate | `nei/core/policy.py` | Risk level check, path validation | 1 |
+| Approvals | `nei/api/routes.py` (approve_task) | Human approval workflow (inline, Phase 1 scope) | 1 |
+| Resource manager | `nei/core/resource_manager.py` | Per-app exclusive locks, concurrent limit | 1 |
 | Connector base | `nei/connectors/base.py` | Abstract connector interface | 1 |
-| Connector registry | `nei/connectors/registry.py` | Discover + register available connectors | 1 |
-| Rhino 6 connector | `nei/connectors/rhino6/` | Rhino 6 automation | 3 |
-| SOLIDWORKS connector | `nei/connectors/solidworks2022/` | SW 2022 COM automation | 6 |
-| Maxsurf connector | `nei/connectors/maxsurf_v8i/` | Maxsurf file exchange | 7 |
+| Connector registry | `nei/connectors/registry.py` | Auto-discover + register available connectors | 1 |
+| Rhino 6 connector | `nei/connectors/rhino6/` | Rhino 6 automation (passive file listener) | 3 |
+| SOLIDWORKS connector | `nei/connectors/solidworks2022.py` | SW 2022 COM automation | 6 |
+| Maxsurf connector | `nei/connectors/maxsurf20.py` | Maxsurf file exchange | 7 |
 | Verification engine | `nei/verification/engine.py` | Postcondition checks, verification records | 3 |
 | Evidence engine | `nei/evidence/` | Ingestion, retrieval, citation | 4 |
-| Knowledge registries | `nei/knowledge/` | Source, formula, method, unit registries | 4–5 |
+| Knowledge registries | `nei/engineering/` | Unit framework, formula registries | 4–5 |
 | Engineering domains | `nei/engineering/` | Unit-safe calculations by domain | 5 |
-| Storage / DB | `nei/storage/` | SQLite, repositories, migrations, artifacts | 1 |
-| Audit / observability | `nei/observability/` | Audit events, metrics, event bus | 1 |
-| Reporting | `nei/reporting/` | Engineering report generation | 5 |
+| Storage / DB | `nei/core/database.py` + `nei/core/artifact_store.py` | SQLite WAL, migrations, artifacts | 1 |
+| Audit / observability | `nei/core/audit.py` | Audit events (append-only) | 1 |
+| Reporting | not yet implemented | Engineering report generation | 9 |
 | Frontend | `apps/ui/` | React dashboard + workspace | 2 |
+
+**Known deviations from original module layout:**
+- `policy.py`, `resource_manager.py`, `approvals` logic live in `nei/core/` and `nei/api/routes.py` instead of the original `nei/execution/` subpackage — consolidated to reduce module sprawl; single-user scope means no need for separate execution-layer package.
+- `knowledge/` registry folded into `nei/engineering/` — formula and unit registries are engineering-domain specific, not general knowledge base.
+- `observability/` collapsed to `nei/core/audit.py` — no metrics or event bus needed for single-process local deployment.
 
 ---
 
