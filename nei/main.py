@@ -14,6 +14,7 @@ from nei.api import routes, sse
 from nei.connectors import api as connectors_api
 from nei.core.config import settings
 from nei.core.database import init_db, get_db
+from nei.engineering.seed import ensure_built_in_formulas
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI):
             "Set NEI_SESSION_SECRET in .env before starting in non-dev mode."
         )
     await init_db()
+    await ensure_built_in_formulas()
     _generate_session_token()
     # Persist token to app_state so restarts can be audited
     async with get_db() as db:

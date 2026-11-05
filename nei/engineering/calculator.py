@@ -29,19 +29,22 @@ FORMULA_REGISTRY: dict[str, dict] = {}
 
 def register_formula(name: str, fn: Callable, param_names: list[str],
                      description: str = "",
-                     param_units: Optional[dict] = None):
+                     param_units: Optional[dict] = None,
+                     domain: str = "engineering"):
     """Register a Python implementation for a formula name.
 
     param_names: list of input keys that map 1:1 to fn positional args, in order.
     The caller passes inputs as a dict; missing required keys → INVALID.
     param_units: optional {param_name: target_si_unit} — string quantity
     inputs (e.g. "10 mm") are parsed to canonical SI before calling fn.
+    domain: evidence domain used when seeding the database.
     """
     FORMULA_REGISTRY[name] = {
         "fn": fn,
         "param_names": param_names,
         "description": description,
         "param_units": param_units or {},
+        "domain": domain,
     }
 
 
@@ -53,27 +56,33 @@ def _load_standard_formulas():
     register_formula("box_volume", geo.box_volume,
                      ["length", "width", "height"],
                      "Box volume: L*W*H (m^3)",
-                     param_units={"length": "m", "width": "m", "height": "m"})
+                     param_units={"length": "m", "width": "m", "height": "m"},
+                     domain="geometry")
     register_formula("box_surface_area", geo.box_surface_area,
                      ["length", "width", "height"],
                      "Box surface area",
-                     param_units={"length": "m", "width": "m", "height": "m"})
+                     param_units={"length": "m", "width": "m", "height": "m"},
+                     domain="geometry")
     register_formula("displacement_volume", geo.displacement_volume,
                      ["loa", "beam", "draft"],
                      "V_block = L*B*T",
-                     param_units={"loa": "m", "beam": "m", "draft": "m"})
+                     param_units={"loa": "m", "beam": "m", "draft": "m"},
+                     domain="geometry")
     register_formula("metacentric_height", hyd.metacentric_height,
                      ["km", "kg"],
                      "GM = KM - KG",
-                     param_units={"km": "m", "kg": "m"})
+                     param_units={"km": "m", "kg": "m"},
+                     domain="hydrostatics")
     register_formula("initial_stability", hyd.initial_stability_indicator,
                      ["gm"],
                      "GM sign → stability",
-                     param_units={"gm": "m"})
+                     param_units={"gm": "m"},
+                     domain="hydrostatics")
     register_formula("hydrostatic_pressure", hyd.hydrostatic_pressure,
                      ["density", "g", "depth"],
                      "P = rho*g*h",
-                     param_units={"density": "kg/m^3", "depth": "m"})
+                     param_units={"density": "kg/m^3", "depth": "m"},
+                     domain="hydrostatics")
 
 
 def _parse_inputs(impl: dict, raw_inputs: dict) -> dict:
