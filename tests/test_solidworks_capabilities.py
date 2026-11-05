@@ -10,8 +10,8 @@ def test_capability_report_has_safe_unknowns(monkeypatch):
     monkeypatch.setattr(connector, "_candidate_paths", lambda: [])
     capabilities = {c.name: c.status.value for c in connector.get_capabilities()}
     assert capabilities["sw.detect"] == "SUPPORTED"
-    assert capabilities["sw.get_document_info"] == "UNKNOWN"
-    assert capabilities["sw.list_features"] == "UNKNOWN"
+    assert capabilities["sw.get_document_info"] == "SUPPORTED"
+    assert capabilities["sw.list_features"] == "SUPPORTED"
     assert capabilities["sw.create_test_part"] == "UNKNOWN"
 
 

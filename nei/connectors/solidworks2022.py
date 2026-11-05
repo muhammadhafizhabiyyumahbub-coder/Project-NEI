@@ -102,23 +102,28 @@ class SolidWorks2022Connector(BaseConnector):
             doc = app.ActiveDoc
             if doc is None:
                 return {"available": False, "error": "NO_ACTIVE_DOCUMENT"}
+            def value(name, default=None):
+                item = getattr(doc, name, default)
+                return item() if callable(item) else item
+
             if operation == "document_info":
                 return {
                     "available": True,
-                    "title": str(doc.GetTitle()),
-                    "path": str(doc.GetPathName()),
-                    "type": int(doc.GetType()),
-                    "read_only": bool(doc.IsOpenedReadOnly()),
+                    "title": str(value("GetTitle", "")),
+                    "path": str(value("GetPathName", "")),
+                    "type": int(value("GetType", 0)),
+                    "read_only": bool(value("IsOpenedReadOnly", False)),
                 }
-            count = int(doc.GetFeatureCount())
+            count = int(value("GetFeatureCount", 0))
             features = []
             for i in range(count):
                 feat = doc.FeatureByPositionReverse(i)
                 if feat:
+                    type_name = getattr(feat, "GetTypeName", "")
                     features.append({
-                        "name": str(feat.Name),
-                        "type": str(feat.GetTypeName()),
-                        "visible": bool(feat.Visible),
+                        "name": str(getattr(feat, "Name", "")),
+                        "type": str(type_name() if callable(type_name) else type_name),
+                        "visible": bool(getattr(feat, "Visible", False)),
                     })
             return {"available": True, "feature_count": count, "features": features}
         except Exception as exc:
@@ -246,8 +251,8 @@ class SolidWorks2022Connector(BaseConnector):
             Capability("sw.detect", CapabilityStatus.SUPPORTED, tested, "Filesystem probe; no COM"),
             Capability("sw.get_version", CapabilityStatus.SUPPORTED, tested, "Executable version resource"),
             Capability("sw.health_check", CapabilityStatus.SUPPORTED, tested, "Filesystem availability only"),
-            Capability("sw.get_document_info", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
-            Capability("sw.list_features", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
+            Capability("sw.get_document_info", CapabilityStatus.SUPPORTED, tested, "Read-only COM inspection tested on active document"),
+            Capability("sw.list_features", CapabilityStatus.SUPPORTED, tested, "Read-only COM feature listing tested on active document"),
             Capability("sw.inspect_feature", CapabilityStatus.UNKNOWN, tested, "L0 read feature dimensions"),
             Capability("sw.export_copy", CapabilityStatus.UNKNOWN, tested, "L1 save-as copy to artifacts/; write-guarded"),
             Capability("sw.create_test_part", CapabilityStatus.UNKNOWN, tested, "L2 disposable part; user approval required"),

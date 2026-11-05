@@ -12,5 +12,7 @@ def test_hull_proxy_sandbox_artifact():
     )
     assert result.success, result.error
     assert result.data["objects"][0]["type"] == "Brep"
-    assert artifact.exists()
-    assert artifact.stat().st_size > 0
+    saved_artifact = Path(result.data["artifact_path"])
+    assert result.data["artifact_saved"]
+    assert saved_artifact.exists()
+    assert saved_artifact.stat().st_size > 0

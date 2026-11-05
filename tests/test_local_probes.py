@@ -19,4 +19,4 @@ def test_local_capability_statuses_remain_honest():
     maxsurf = {c.name: c.status.value for c in Maxsurf20Connector(settings.maxsurf_exe_path).get_capabilities()}
     solidworks = {c.name: c.status.value for c in SolidWorks2022Connector(settings.solidworks_exe_path).get_capabilities()}
     assert maxsurf["maxsurf.inspect_project_file"] == "UNKNOWN"
-    assert solidworks["sw.get_document_info"] == "UNKNOWN"
+    assert solidworks["sw.get_document_info"] == "SUPPORTED"

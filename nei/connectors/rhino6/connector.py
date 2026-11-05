@@ -15,6 +15,7 @@ import re
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
@@ -481,7 +482,7 @@ class Rhino6Connector(BaseConnector):
         tmp.unlink(missing_ok=True)
         artifact_path = _check_path(artifact_path, "artifact_path")
         if Path(artifact_path).exists():
-            artifact_path = str(Path(artifact_path).with_name(Path(artifact_path).stem + "_" + str(int(time.time())) + Path(artifact_path).suffix))
+            artifact_path = str(Path(artifact_path).with_name(Path(artifact_path).stem + "_" + uuid.uuid4().hex[:8] + Path(artifact_path).suffix))
         script = _render_hull_proxy_script(loa, beam, depth, str(tmp), artifact_path)
         tmp_script = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_hull.py"
         tmp_script.write_text(script, encoding="utf-8")
@@ -492,7 +493,12 @@ class Rhino6Connector(BaseConnector):
         if not result.get("success"):
             return ToolResult(success=False, object_ids=result.get("object_ids", []), data=result, error=result.get("error"))
         exported = self._export_copy(artifact_path, timeout_s=timeout_s)
-        artifact_saved = Path(artifact_path).exists() and Path(artifact_path).stat().st_size > 0
+        artifact = Path(artifact_path)
+        for _ in range(25):
+            if artifact.exists() and artifact.stat().st_size > 0:
+                break
+            time.sleep(0.2)
+        artifact_saved = artifact.exists() and artifact.stat().st_size > 0
         result.update({"artifact_path": artifact_path, "artifact_saved": artifact_saved, "artifact": exported.data})
         return ToolResult(success=artifact_saved, object_ids=result.get("object_ids", []), data=result,
                           error=None if artifact_saved else exported.error)
