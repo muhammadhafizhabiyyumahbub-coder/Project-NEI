@@ -492,48 +492,29 @@ async def run_task_endpoint(task_id: str):
                     )
                     handoff_chain.append(hop)
 
-            # Step 11: RUNNING → VERIFYING
-            await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING,
-                                  {"success": True})
-
-            # Step 12: Run verification postconditions
-            if action == "rhino.create_box_test":
-                pcs = rhino_box_postconditions(params.get("length", 10.0),
-                                               params.get("width", 3.0),
-                                               params.get("height", 1.0))
-            elif action == "rhino.export_copy":
-                pcs = rhino_export_copy_postconditions(
-                    filename=result.data.get("artifact_filename", ""),
-                    expected_sha256=result.data.get("artifact_sha256"),
-                )
-            else:
-                pcs = []
-
-            from nei.core.task_manager import verify_task
-            try:
-                await verify_task(task_id, result.data, conn.get_version() or "unknown", pcs)
-            except Exception as e:
-                async with get_db() as db:
-                    await log_event(db, task_id=task_id, event_type="VERIFY_ERROR",
-                                    detail_json={"error": str(e)})
-                    await db.commit()
-
-            # Step 13: Update handoff chain with verification result
-            if handoff_chain:
-                hop = HandoffHop(
-                    software=connector_id,
-                    software_version=conn.get_version() or "unknown",
-                    operation="verify",
-                    file_path=handoff_filename or "",
-                    file_sha256=result.data.get("artifact_sha256", ""),
-                    file_format=params.get("format", "STEP"),
-                    unit=params.get("unit", "mm"),
-                    notes=f"Verification passed for {action}",
-                )
-                handoff_chain.append(hop)
+            # Keep task RUNNING until all plan steps finish. Final verification is below.
 
         finally:
             release_app_lock(connector_id, task_id)
+
+    # Final verification runs once after every step, preserving multi-step state flow.
+    await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING, {"steps": len(plan.steps)})
+    from nei.core.task_manager import verify_task
+    final_result = result.data
+    if plan.steps[-1].action == "rhino.create_box_test":
+        final_conditions = rhino_box_postconditions(
+            plan.steps[-1].params.get("length", 10.0),
+            plan.steps[-1].params.get("width", 3.0),
+            plan.steps[-1].params.get("height", 1.0),
+        )
+    elif plan.steps[-1].action == "rhino.export_copy":
+        final_conditions = rhino_export_copy_postconditions(
+            filename=final_result.get("artifact_filename", ""),
+            expected_sha256=final_result.get("artifact_sha256"),
+        )
+    else:
+        final_conditions = []
+    await verify_task(task_id, final_result, conn.get_version() or "unknown", final_conditions)
 
     # Step 14: Write provenance manifest if handoff occurred
     if handoff_chain:
