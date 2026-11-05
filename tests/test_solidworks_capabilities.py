@@ -12,7 +12,7 @@ def test_capability_report_has_safe_unknowns(monkeypatch):
     assert capabilities["sw.detect"] == "SUPPORTED"
     assert capabilities["sw.get_document_info"] == "UNKNOWN"
     assert capabilities["sw.list_features"] == "UNKNOWN"
-    assert capabilities["sw.create_test_part"] == "UNSUPPORTED"
+    assert capabilities["sw.create_test_part"] == "UNKNOWN"
 
 
 def test_capability_endpoint():

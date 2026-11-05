@@ -9,10 +9,11 @@ def test_solidworks_probe_does_not_activate_com(monkeypatch):
     assert "COM" in (result.notes or "")
 
 
-def test_solidworks_execute_is_read_only():
-    result = SolidWorks2022Connector().execute("sw.create_test_part", {}, timeout_s=1)
+def test_solidworks_execute_read_action_returns_structured_result():
+    """L0 inspect_feature without COM → structured error, not crash."""
+    result = SolidWorks2022Connector().execute("sw.inspect_feature", {"feature_name": "Sketch1"}, timeout_s=5)
     assert result.success is False
-    assert "read-only" in (result.error or "")
+    assert result.error  # some error string expected when no COM
 
 
 def test_solidworks_health_when_missing(monkeypatch):

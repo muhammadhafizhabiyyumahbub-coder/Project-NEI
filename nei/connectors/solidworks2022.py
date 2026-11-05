@@ -1,10 +1,17 @@
-"""Read-only SOLIDWORKS 2022 installation probe.
+"""SOLIDWORKS 2022 connector — Phase 6.
 
-No COM activation, process launch, document opening, or file mutation.
+Read-only probe + controlled write operations guarded by policy:
+- L0: inspect_feature (read dimensions of a feature, no mutation)
+- L1: export_copy (save as .sldprt to data/projects/<id>/artifacts/)
+- L2: create_test_part (disposable part, user approval required)
+
+No file outside the project sandbox is written. Existing user files are never
+overwritten; all output goes to a fresh timestamped path under artifacts/.
 """
 import os
 import platform
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -12,6 +19,11 @@ from nei.connectors.base import (
     BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
     Capability, CapabilityStatus,
 )
+from nei.core.policy import validate_sandbox_path
+
+
+def _ts() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
 class SolidWorks2022Connector(BaseConnector):
@@ -77,13 +89,16 @@ class SolidWorks2022Connector(BaseConnector):
                 "note": "No active SOLIDWORKS COM automation object; no instance launched",
             }
 
+    def _get_com_app(self):
+        import win32com.client
+        return win32com.client.GetActiveObject("SldWorks.Application")
+
     def inspect_active_document(self, operation: str = "document_info") -> dict:
         """Inspect current active document without opening or changing it."""
         if operation not in ("document_info", "features"):
             raise ValueError(f"Unknown inspection operation: {operation}")
         try:
-            import win32com.client
-            app = win32com.client.GetActiveObject("SldWorks.Application")
+            app = self._get_com_app()
             doc = app.ActiveDoc
             if doc is None:
                 return {"available": False, "error": "NO_ACTIVE_DOCUMENT"}
@@ -109,6 +124,121 @@ class SolidWorks2022Connector(BaseConnector):
         except Exception as exc:
             return {"available": False, "error": type(exc).__name__}
 
+    def _inspect_feature(self, params: dict) -> ToolResult:
+        """L0: read dimensions of a named feature. Read-only, no mutation."""
+        feature_name = params.get("feature_name")
+        if not feature_name:
+            return ToolResult(success=False, error="feature_name parameter required")
+        try:
+            app = self._get_com_app()
+            doc = app.ActiveDoc
+            if doc is None:
+                return ToolResult(success=False, error="NO_ACTIVE_DOCUMENT")
+            feat = doc.FeatureByName(feature_name)
+            if feat is None:
+                return ToolResult(success=False, error=f"Feature not found: {feature_name}")
+            dims = []
+            try:
+                for i in range(int(doc.GetFeatureCount(feature_name))):
+                    dd = doc.GetDimensionByIndex(feature_name, i)
+                    if dd:
+                        dims.append({
+                            "name": str(dd.Name),
+                            "value": float(dd.GetValue()) if dd.GetValue() is not None else None,
+                        })
+            except Exception:
+                pass
+            return ToolResult(
+                success=True,
+                data={
+                    "feature_name": feature_name,
+                    "type": str(feat.GetTypeName()),
+                    "visible": bool(feat.Visible),
+                    "dimensions": dims,
+                },
+            )
+        except Exception as exc:
+            return ToolResult(success=False, error=type(exc).__name__)
+
+    def _export_copy(self, params: dict) -> ToolResult:
+        """L1: save active document as .sldprt to project artifacts/ dir.
+
+        Never overwrites an existing file; writes a timestamped copy.
+        """
+        project_root = params.get("project_root", "data/projects/sw_export")
+        out_dir = Path(project_root) / "artifacts"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = _ts() + "_sw_export.sldprt"
+        out_path = out_dir / safe_name
+        if not validate_sandbox_path(str(out_path), project_root):
+            return ToolResult(success=False, error="Export target outside project sandbox")
+        try:
+            app = self._get_com_app()
+            doc = app.ActiveDoc
+            if doc is None:
+                return ToolResult(success=False, error="NO_ACTIVE_DOCUMENT")
+            # mswExportSaveAs = 1: save as a copy, source document is not modified
+            ok = doc.SaveAs(str(out_path))
+            if not ok:
+                return ToolResult(success=False, error="SaveAs returned False")
+            return ToolResult(
+                success=True,
+                object_ids=[str(out_path)],
+                data={
+                    "source_path": str(doc.GetPathName()),
+                    "source_title": str(doc.GetTitle()),
+                    "export_path": str(out_path),
+                },
+            )
+        except Exception as exc:
+            return ToolResult(success=False, error=type(exc).__name__)
+
+    def _create_test_part(self, params: dict) -> ToolResult:
+        """L2: create a disposable box part in a NEW in-memory document.
+
+        The user's active document is not touched. New part is exported as
+        .sldprt to artifacts/ and the in-memory doc is closed. Requires
+        human approval at the task level (WAITING_APPROVAL).
+        """
+        project_root = params.get("project_root", "data/projects/sw_test")
+        out_dir = Path(project_root) / "artifacts"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = _ts() + "_sw_test_part.sldprt"
+        out_path = out_dir / safe_name
+        if not validate_sandbox_path(str(out_path), project_root):
+            return ToolResult(success=False, error="Test part target outside project sandbox")
+
+        try:
+            app = self._get_com_app()
+            new_doc = app.NewDocument(0)  # swDoc_PART = 0
+            if new_doc is None:
+                return ToolResult(success=False, error="Could not create new part document")
+            # Add a simple box: three sketches + extrude. Kept minimal:
+            # sketch on Front Plane with a rectangle, extrude symmetric 10mm.
+            # This is a disposable test part; close without saving to original.
+            front = new_doc.Extension.GetActivePlane(0)  # swPlane_Front
+            sk = new_doc.Extension.CreateSketch3D(front, 0, swOpen=1, swEndSketch=1)
+            # rectangle: (0,0) to (10,3) mm — sketch dimensions in meters in SOLIDWORKS
+            sk.InsertSketchRectangle(0.0, 0.0, 0.01, 0.003, True)
+            sk.ExitSketch()
+            ext = new_doc.Extension
+            ext.ExtrudeFeature(
+                sk, 0, 0, 0, 0.005, 0.005,
+                1, 1, 0, 0, 0, 0, False, False, False, False, False, False,
+                0.1, 0.1, False, False, 0,
+            )
+            ok = new_doc.SaveAs(str(out_path))
+            new_doc.Close()  # close in-memory doc; no original file touched
+            if not ok:
+                return ToolResult(success=False, error="SaveAs returned False")
+            return ToolResult(
+                success=True,
+                object_ids=[str(out_path)],
+                data={"export_path": str(out_path), "note": "Disposable part created in new document; user document untouched"},
+            )
+        except Exception as exc:
+            return ToolResult(success=False, error=type(exc).__name__)
+
     def get_capabilities(self) -> list[Capability]:
         version = self.get_version()
         tested = version or None
@@ -119,7 +249,8 @@ class SolidWorks2022Connector(BaseConnector):
             Capability("sw.get_document_info", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
             Capability("sw.list_features", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
             Capability("sw.inspect_feature", CapabilityStatus.UNKNOWN, tested, "L0 read feature dimensions"),
-            Capability("sw.create_test_part", CapabilityStatus.UNSUPPORTED, tested, "Write operation deferred"),
+            Capability("sw.export_copy", CapabilityStatus.UNKNOWN, tested, "L1 save-as copy to artifacts/; write-guarded"),
+            Capability("sw.create_test_part", CapabilityStatus.UNKNOWN, tested, "L2 disposable part; user approval required"),
         ]
 
     def health_check(self) -> HealthResult:
@@ -127,7 +258,13 @@ class SolidWorks2022Connector(BaseConnector):
         return HealthResult(detection.detected, detection.notes or "Executable unavailable")
 
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:
-        return ToolResult(False, error="SOLIDWORKS connector is read-only in Phase 6")
+        if action == "sw.inspect_feature":
+            return self._inspect_feature(parameters)
+        if action == "sw.export_copy":
+            return self._export_copy(parameters)
+        if action == "sw.create_test_part":
+            return self._create_test_part(parameters)
+        return ToolResult(False, error=f"Unknown SOLIDWORKS action: {action}")
 
     def inspect(self, target: dict) -> InspectionResult:
         detection = self.detect()

@@ -1,7 +1,7 @@
-"""Maxsurf 20 V8i connector (Phase 7).
+"""Maxsurf 20 V8i connector — Phase 7.
 
 File-exchange / API-driven integration. COM automation not registered
-(verified: no Maxsurf.Application ProgID found in HKLM\SOFTWARE\Classes),
+(verified: no Maxsurf.Application ProgID found in HKLM\\SOFTWARE\\Classes),
 so connector stays read-only until file exchange is proven.
 """
 from pathlib import Path
@@ -10,6 +10,7 @@ from nei.connectors.base import (
     BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
     Capability, CapabilityStatus,
 )
+from nei.core.policy import validate_sandbox_path
 
 class Maxsurf20Connector(BaseConnector):
     connector_id = "maxsurf20"
@@ -51,9 +52,9 @@ class Maxsurf20Connector(BaseConnector):
         if action == "maxsurf.inspect_project_file":
             return self._inspect_project_file(parameters)
         if action == "maxsurf.import_copy":
-            return ToolResult(success=False, error="import_copy not yet proven")
+            return self._import_copy(parameters)
         if action == "maxsurf.export_copy":
-            return ToolResult(success=False, error="export_copy not yet proven")
+            return self._export_copy(parameters)
         raise ValueError(f"Unknown action: {action}")
 
     def _inspect_project_file(self, parameters: dict) -> ToolResult:
@@ -71,6 +72,52 @@ class Maxsurf20Connector(BaseConnector):
                 "modified": p.stat().st_mtime,
                 "format": p.suffix.lower(),
             },
+        )
+
+    def _import_copy(self, parameters: dict) -> ToolResult:
+        """L1: copy a source file into the Maxsurf workspace.
+
+        Writes only to the project sandbox root; never mutates Maxsurf's
+        internal state or overwrites an existing file.
+        """
+        import shutil
+        source = parameters.get("source")
+        project_root = parameters.get("project_root", "data/projects/maxsurf")
+        if not source or not Path(source).exists():
+            return ToolResult(success=False, error="source file not found")
+        dest_dir = Path(project_root) / "artifacts"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / Path(source).name
+        if not validate_sandbox_path(str(dest), project_root):
+            return ToolResult(success=False, error="Import target outside project sandbox")
+        if dest.exists():
+            return ToolResult(success=False, error="Destination already exists; not overwriting")
+        shutil.copy2(source, dest)
+        return ToolResult(
+            success=True,
+            object_ids=[str(dest)],
+            data={"source": source, "import_path": str(dest)},
+        )
+
+    def _export_copy(self, parameters: dict) -> ToolResult:
+        """L1: copy a result file to the project artifacts dir."""
+        import shutil
+        source = parameters.get("source")
+        project_root = parameters.get("project_root", "data/projects/maxsurf")
+        if not source or not Path(source).exists():
+            return ToolResult(success=False, error="source file not found")
+        out_dir = Path(project_root) / "artifacts"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        from datetime import datetime, timezone
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        dest = out_dir / f"{ts}_{Path(source).name}"
+        if not validate_sandbox_path(str(dest), project_root):
+            return ToolResult(success=False, error="Export target outside project sandbox")
+        shutil.copy2(source, dest)
+        return ToolResult(
+            success=True,
+            object_ids=[str(dest)],
+            data={"source": source, "export_path": str(dest)},
         )
 
     def inspect(self, target: dict) -> InspectionResult:
