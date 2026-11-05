@@ -152,7 +152,16 @@ def main():
         artifact_dir = os.path.dirname(artifact_path)
         if artifact_dir and not os.path.isdir(artifact_dir):
             os.makedirs(artifact_dir)
-        Rhino.RhinoDoc.ActiveDoc.SaveAs(artifact_path, 0)
+        try:
+            saved = rs.Command("_-SaveAs {} _Enter".format(artifact_path), echo=False)
+            result["artifact_path"] = artifact_path
+            result["artifact_saved"] = bool(saved) and os.path.exists(artifact_path)
+        except Exception as exc:
+            result["artifact_saved"] = False
+            result["artifact_error"] = str(exc)
+
+    with open({RESULT_PATH}, "w") as f:
+        json.dump(result, f)
 
 main()
 '''
@@ -247,9 +256,9 @@ def main():
     artifact_dir = os.path.dirname(artifact_path)
     if artifact_dir and not os.path.isdir(artifact_dir):
         os.makedirs(artifact_dir)
-    # SaveAs copies the active doc to a new file (does not modify the doc)
-    ok = doc.SaveAs(artifact_path, 0)
-    if not ok:
+    # Use Rhino command to save a copy without changing active document path.
+    ok = rs.Command("_-SaveAs {} _Enter".format(artifact_path), echo=False)
+    if not ok or not os.path.exists(artifact_path):
         result["error"] = "SaveAs failed"
     else:
         result["success"] = True
