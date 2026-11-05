@@ -1,8 +1,14 @@
-import os
+"""Maxsurf 20 V8i connector (Phase 7).
+
+File-exchange / API-driven integration. COM automation not registered
+(verified: no Maxsurf.Application ProgID found in HKLM\SOFTWARE\Classes),
+so connector stays read-only until file exchange is proven.
+"""
 from pathlib import Path
 from typing import Optional
 from nei.connectors.base import (
-    BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult, Capability, CapabilityStatus,
+    BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
+    Capability, CapabilityStatus,
 )
 
 class Maxsurf20Connector(BaseConnector):
@@ -41,10 +47,34 @@ class Maxsurf20Connector(BaseConnector):
         return HealthResult(healthy=True, detail="Executable found")
 
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:
-        raise PermissionError("Maxsurf write operations deferred; Phase 7 write probe pending")
+        """File exchange actions; write guarded by policy (L1/L2 approval)."""
+        if action == "maxsurf.inspect_project_file":
+            return self._inspect_project_file(parameters)
+        if action == "maxsurf.import_copy":
+            return ToolResult(success=False, error="import_copy not yet proven")
+        if action == "maxsurf.export_copy":
+            return ToolResult(success=False, error="export_copy not yet proven")
+        raise ValueError(f"Unknown action: {action}")
+
+    def _inspect_project_file(self, parameters: dict) -> ToolResult:
+        """Read metadata from .mfd/.msd without opening Maxsurf."""
+        path = parameters.get("path")
+        if not path or not Path(path).exists():
+            return ToolResult(success=False, error=f"File not found: {path}")
+        p = Path(path)
+        return ToolResult(
+            success=True,
+            data={
+                "path": str(p),
+                "exists": True,
+                "size_bytes": p.stat().st_size,
+                "modified": p.stat().st_mtime,
+                "format": p.suffix.lower(),
+            },
+        )
 
     def inspect(self, target: dict) -> InspectionResult:
-        """Read-only list-feature inspection for active model; mock only."""
+        """Read-only inspection of objects or document state (mock until proven)."""
         return InspectionResult(objects=[], document={}, error="Maxsurf automation API not validated")
 
     def detach(self) -> None:
@@ -52,8 +82,9 @@ class Maxsurf20Connector(BaseConnector):
 
     def get_capabilities(self) -> list[Capability]:
         return [
-            Capability("ms.detect", CapabilityStatus.SUPPORTED, None, "Filesystem probe"),
-            Capability("ms.get_version", CapabilityStatus.SUPPORTED, None, "Executable version"),
-            Capability("ms.list_components", CapabilityStatus.UNKNOWN, None, "Requires COM/Automation API test"),
-            Capability("ms.get_model_info", CapabilityStatus.UNSUPPORTED, None, "Write operation deferred"),
+            Capability("maxsurf.detect", CapabilityStatus.SUPPORTED, None, "Filesystem probe"),
+            Capability("maxsurf.get_version", CapabilityStatus.SUPPORTED, None, "Executable version"),
+            Capability("maxsurf.inspect_project_file", CapabilityStatus.UNKNOWN, None, "L0 read metadata"),
+            Capability("maxsurf.import_copy", CapabilityStatus.UNKNOWN, None, "L1 file exchange"),
+            Capability("maxsurf.export_copy", CapabilityStatus.UNKNOWN, None, "L1 file exchange"),
         ]

@@ -16,7 +16,15 @@ def test_detect():
 
 def test_get_capabilities():
     caps = {c.name: c.status.value for c in Maxsurf20Connector().get_capabilities()}
-    assert caps["ms.detect"] == "SUPPORTED"
-    assert caps["ms.get_version"] == "SUPPORTED"
-    assert caps["ms.list_components"] == "UNKNOWN"
-    assert caps["ms.get_model_info"] == "UNSUPPORTED"
+    assert caps["maxsurf.detect"] == "SUPPORTED"
+    assert caps["maxsurf.get_version"] == "SUPPORTED"
+    assert caps["maxsurf.inspect_project_file"] == "UNKNOWN"
+    assert caps["maxsurf.import_copy"] == "UNKNOWN"
+    assert caps["maxsurf.export_copy"] == "UNKNOWN"
+
+
+def test_inspect_project_file():
+    connector = Maxsurf20Connector()
+    result = connector.execute("maxsurf.inspect_project_file", {"path": r"C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\MaxsurfModeler64.exe"}, timeout_s=5)
+    assert result.success is True
+    assert result.data["exists"] is True

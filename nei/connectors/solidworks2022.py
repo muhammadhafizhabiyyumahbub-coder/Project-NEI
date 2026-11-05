@@ -118,6 +118,7 @@ class SolidWorks2022Connector(BaseConnector):
             Capability("sw.health_check", CapabilityStatus.SUPPORTED, tested, "Filesystem availability only"),
             Capability("sw.get_document_info", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
             Capability("sw.list_features", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
+            Capability("sw.inspect_feature", CapabilityStatus.UNKNOWN, tested, "L0 read feature dimensions"),
             Capability("sw.create_test_part", CapabilityStatus.UNSUPPORTED, tested, "Write operation deferred"),
         ]
 
