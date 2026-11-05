@@ -46,8 +46,25 @@ async def probe_connector(connector_id: str):
     from nei.connectors.rhino6 import Rhino6Connector
     from nei.core.config import settings
 
+    if connector_id == "solidworks2022":
+        from nei.connectors.solidworks2022 import SolidWorks2022Connector
+        conn = SolidWorks2022Connector()
+        det = conn.detect()
+        ts = datetime.now(timezone.utc).isoformat()
+        status = "DETECTED" if det.detected else "NOT_FOUND"
+        async with get_db() as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) VALUES (?, ?, ?, ?, ?, ?)",
+                (connector_id, conn.name, status, ts, det.version, det.exe_path),
+            )
+            await db.commit()
+        return {
+            "connector_id": connector_id, "detected": det.detected,
+            "version": det.version, "exe_path": det.exe_path,
+            "probe_ts": ts, "note": det.notes,
+        }
+
     if connector_id != "rhino6":
-        # Unknown connector ID — keep mock behavior for non-rhino connectors
         return await _mock_probe(connector_id)
 
     conn = Rhino6Connector(rhino_exe=settings.rhino_exe_path)
