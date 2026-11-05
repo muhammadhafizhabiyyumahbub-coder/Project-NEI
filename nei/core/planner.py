@@ -53,13 +53,47 @@ def _is_box_request(user_request: str) -> bool:
     return bool(m) or ("box" in user_request.lower())
 
 
+HANDOFF_PATTERN = re.compile(
+    r"(?:handoff|transfer)\s*(?:a\s+|the\s+)?(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)"
+    r"(?:\s+box)?\s*(?:to\s+(\w+))?",
+    re.IGNORECASE,
+)
+
+
+def _is_handoff_request(user_request: str) -> bool:
+    m = HANDOFF_PATTERN.search(user_request)
+    return bool(m) or ("handoff" in user_request.lower() or "transfer" in user_request.lower())
+
+
 def plan_task(user_request: str, task_type: str = "geometry") -> Plan:
     """Produce a structured plan for a user request.
 
     Alpha 0.1:
     - Box creation in Rhino 6 → single-step plan with L1 risk
+    - Phase 8: cross-software handoff → 3-step chain (export → import → verify)
     - Anything else → fallback step with note (LLM decides here in full mode)
     """
+    if _is_handoff_request(user_request):
+        m = HANDOFF_PATTERN.search(user_request)
+        if m:
+            l, w, h = float(m.group(1)), float(m.group(2)), float(m.group(3))
+            target = m.group(4) or "solidworks2022"
+        else:
+            l, w, h = DEFAULT_L, DEFAULT_W, DEFAULT_H
+            target = "solidworks2022"
+        return Plan(
+            task_type="handoff",
+            steps=[
+                PlanStep("rhino.create_box_test", "L1",
+                         {"length": l, "width": w, "height": h, "export_format": "STEP"}),
+                PlanStep("rhino.export_copy", "L1",
+                         {"format": "STEP", "unit": "mm"}),
+                PlanStep(f"{target}.import_copy", "L1",
+                         {"format": "STEP", "unit": "mm", "verify_bbox": [l, w, h]}),
+            ],
+            notes=f"Handoff plan: {l}x{w}x{h} box → {target} via STEP",
+        )
+
     if _is_box_request(user_request):
         params = _extract_box_params(user_request)
         return Plan(
