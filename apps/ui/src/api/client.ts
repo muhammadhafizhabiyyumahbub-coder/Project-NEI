@@ -102,6 +102,8 @@ export type CalcRun = {
   inputs: Record<string, unknown>;
   result: unknown;
   evidence_status: string;
+  formula_review_status?: string;
+  deterministic_hash?: string;
   run_id: string;
   created_at: string;
 };

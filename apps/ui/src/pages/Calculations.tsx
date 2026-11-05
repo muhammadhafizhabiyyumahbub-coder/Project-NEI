@@ -11,16 +11,20 @@ export function Calculations() {
   const [selected, setSelected] = useState<Formula | null>(null);
   const [inputsJson, setInputsJson] = useState("{}");
   const [runResult, setRunResult] = useState<CalcRun | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
 
   async function doRun() {
     if (!selected) return;
     setRunning(true);
+    setRunError(null);
     try {
       const parsed: Record<string, unknown> = JSON.parse(inputsJson || "{}");
-      const r = await runCalculation({ formula_id: selected.id, inputs: parsed });
+      const r = await runCalculation({ formula_id: selected.id, inputs: parsed, research: true });
       setRunResult(r);
       refetch();
+    } catch (e) {
+      setRunError((e as Error).message);
     } finally {
       setRunning(false);
     }
@@ -41,7 +45,7 @@ export function Calculations() {
                 </div>
                 <div className="text-xs text-gray-400 font-mono mt-1">{f.equation_text}</div>
                 <button
-                  onClick={() => { setSelected(f); setInputsJson("{}"); setRunResult(null); }}
+                  onClick={() => { setSelected(f); setInputsJson("{}"); setRunResult(null); setRunError(null); }}
                   className="mt-2 px-2 py-1 text-sm bg-primary text-primary-foreground rounded"
                 >
                   Run
@@ -58,7 +62,7 @@ export function Calculations() {
             <textarea
               value={inputsJson}
               onChange={(e) => setInputsJson(e.target.value)}
-              placeholder='{"bend_r": 200, "t": 10}'
+              placeholder='{"length": 10, "width": 3, "height": 1}'
               className="w-full p-2 border rounded font-mono text-sm"
               rows={3}
             />
@@ -66,9 +70,16 @@ export function Calculations() {
           <button onClick={doRun} disabled={running} className="px-3 py-1 bg-primary text-primary-foreground rounded">
             {running ? "Running..." : "Run Calculation"}
           </button>
+          {runError && (
+            <div className="mt-4 p-4 border rounded text-error text-sm">{runError}</div>
+          )}
           {runResult && (
             <div className="mt-4 p-4 border rounded">
               <h4 className="font-medium mb-2">Result</h4>
+              <div className="text-sm flex gap-4 mb-2">
+                <span>Status: <span className="font-mono">{runResult.evidence_status}</span></span>
+                <span>Formula status: <span className="font-mono">{runResult.formula_review_status}</span></span>
+              </div>
               <pre className="text-sm">{JSON.stringify(runResult.result ?? runResult, null, 2)}</pre>
             </div>
           )}
