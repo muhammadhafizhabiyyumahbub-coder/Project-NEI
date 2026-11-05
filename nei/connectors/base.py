@@ -70,6 +70,10 @@ class BaseConnector(ABC):
         """Is process running and responsive?"""
         ...
 
+    def get_capabilities(self) -> list[Capability]:
+        """Return advertised action capabilities; empty means connector-specific validation."""
+        return []
+
     @abstractmethod
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:
         """Execute an allowlisted action. Idempotent-safe where possible."""

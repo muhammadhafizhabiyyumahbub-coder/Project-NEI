@@ -457,7 +457,15 @@ async def run_task_endpoint(task_id: str):
                 kwargs["rhino_exe"] = settings.rhino_exe_path
             conn = cls(**kwargs)
 
-            # Step 9: Execute connector action
+            # Step 9: Validate advertised capability before execution.
+            capabilities = {cap.name: cap.status.value for cap in conn.get_capabilities()}
+            capability = capabilities.get(action)
+            if capability in {"UNSUPPORTED", "UNAVAILABLE"}:
+                raise HTTPException(status_code=400, detail=f"Capability unavailable: {action}")
+            if capability is None and not action.startswith("rhino."):
+                raise HTTPException(status_code=400, detail=f"Capability unknown: {action}")
+
+            # Step 10: Execute connector action
             result = conn.execute(action, params, timeout_s=60)
 
             async with get_db() as db:
