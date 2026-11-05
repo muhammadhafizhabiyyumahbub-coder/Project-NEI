@@ -96,7 +96,16 @@ class SolidWorks2022Connector(BaseConnector):
                     "read_only": bool(doc.IsOpenedReadOnly()),
                 }
             count = int(doc.GetFeatureCount())
-            return {"available": True, "feature_count": count}
+            features = []
+            for i in range(count):
+                feat = doc.FeatureByPositionReverse(i)
+                if feat:
+                    features.append({
+                        "name": str(feat.Name),
+                        "type": str(feat.GetTypeName()),
+                        "visible": bool(feat.Visible),
+                    })
+            return {"available": True, "feature_count": count, "features": features}
         except Exception as exc:
             return {"available": False, "error": type(exc).__name__}
 
