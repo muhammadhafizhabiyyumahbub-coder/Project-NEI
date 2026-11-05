@@ -60,6 +60,27 @@ async def connector_capabilities(connector_id: str):
     raise HTTPException(status_code=404, detail="Capability report unavailable")
 
 
+@router.get("/connectors/{connector_id}/inspect")
+async def inspect_connector(connector_id: str, operation: str = "document_info"):
+    """Read-only inspection endpoint; never opens or mutates a document.
+
+    SOLIDWORKS document inspection remains unavailable until a live COM probe
+    is validated on a licensed installation.
+    """
+    if connector_id != "solidworks2022":
+        raise HTTPException(status_code=404, detail="Inspection unavailable")
+    if operation not in ("document_info", "features"):
+        raise HTTPException(status_code=400, detail="Unknown inspection operation")
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "code": "SOLIDWORKS_COM_UNAVAILABLE",
+            "operation": operation,
+            "message": "Read-only document inspection requires a validated live SOLIDWORKS COM session",
+        },
+    )
+
+
 @router.post("/connectors/{connector_id}/probe")
 async def probe_connector(connector_id: str):
     """Probe a connector: real detect/version for rhino6, mock for others."""
