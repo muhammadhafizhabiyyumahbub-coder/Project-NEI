@@ -40,5 +40,8 @@ class Settings(BaseSettings):
     # SOLIDWORKS 2022
     solidworks_exe_path: str = r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe"
 
+    # Maxsurf 20 V8i
+    maxsurf_exe_path: str = r"D:\Maxsurf\Bentley Maxsurf Enterprise V8i (SELECTSeries 3) 20.00.01.59\MaxsurfModeler64.exe"
+
 
 settings = Settings()

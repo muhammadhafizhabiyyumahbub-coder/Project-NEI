@@ -59,6 +59,8 @@ async def list_capabilities():
             kwargs["exe_path"] = settings.solidworks_exe_path
         elif connector["id"] == "rhino6":
             kwargs["rhino_exe"] = settings.rhino_exe_path
+        elif connector["id"] == "maxsurf20":
+            kwargs["exe_path"] = settings.maxsurf_exe_path
         for item in cls(**kwargs).get_capabilities():
             capabilities.append({"connector_id": connector["id"], **_capability_dict(item)})
     capabilities.extend([
@@ -106,6 +108,8 @@ async def connector_capabilities(connector_id: str):
         kwargs["exe_path"] = settings.solidworks_exe_path
     elif connector_id == "rhino6":
         kwargs["rhino_exe"] = settings.rhino_exe_path
+    elif connector_id == "maxsurf20":
+        kwargs["exe_path"] = settings.maxsurf_exe_path
     conn = cls(**kwargs)
     return {"connector_id": connector_id,
             "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
