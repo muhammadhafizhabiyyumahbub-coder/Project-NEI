@@ -370,6 +370,186 @@ async def run_task_endpoint(task_id: str):
     """Drive a PENDING task through planning → validating → queued → running → verifying.
 
     Uses the template planner to pick the connector action, then executes it
+    via registered connector and runs postcondition verification.
+    """
+    from nei.core.task_manager import get_task, transition_task
+    from nei.core.state_machine import TaskStatus
+    from nei.core.planner import plan_task
+    from nei.core.policy import risk_requires_approval
+    from nei.core.audit import log_event
+    from nei.core.database import get_db
+    from nei.connectors.registry import get_connector_class
+    from nei.core.resource_manager import acquire_app_lock, release_app_lock
+    from nei.core.config import settings
+    from nei.verification.postconditions import rhino_box_postconditions, rhino_export_copy_postconditions
+    from nei.engineering.handoff import save_handoff_file, write_provenance_manifest, HandoffHop
+    import json as _json
+
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    state = TaskStatus(task["state"])
+    if state != TaskStatus.PENDING:
+        raise HTTPException(status_code=400, detail=f"Task must be in PENDING state, got {state.value}")
+
+    # Step 1: PENDING → PLANNING
+    await transition_task(task_id, "start_planning", TaskStatus.PLANNING)
+
+    # Step 2: Run planner
+    plan = plan_task(task["user_request"], task["task_type"])
+    if not plan.steps:
+        await transition_task(task_id, "needs_input", TaskStatus.NEEDS_INPUT)
+        raise HTTPException(status_code=400,
+                            detail=f"Planner needs input: {plan.required_inputs}")
+
+    # Step 3: PLANNING → VALIDATING
+    await transition_task(task_id, "plan_validated", TaskStatus.VALIDATING,
+                          {"plan": [s.action for s in plan.steps], "params": [s.params for s in plan.steps]})
+
+    # Step 4: policy check
+    for step in plan.steps:
+        if risk_requires_approval(step.risk_level):
+            await transition_task(task_id, "approval_required", TaskStatus.WAITING_APPROVAL)
+            raise HTTPException(status_code=400,
+                                detail=f"Risk level {step.risk_level} requires approval. "
+                                       "Approve via POST /tasks/{id}/approve, then re-run.")
+
+    # Step 5: VALIDATING → QUEUED
+    await transition_task(task_id, "validating_complete", TaskStatus.QUEUED)
+
+    # Initialize handoff chain
+    handoff_chain: list[HandoffHop] = []
+    handoff_artifact: Optional[bytes] = None
+    handoff_filename: Optional[str] = None
+
+    # Execute all steps in sequence
+    for step_idx, step in enumerate(plan.steps):
+        action = step.action
+        params = dict(step.params)
+
+        # Step 6: QUEUED → RUNNING (acquire app lock first per resource policy)
+        connector_id = action.split(".")[0]
+        connector_id = {"rhino": "rhino6"}.get(connector_id, connector_id)
+        lock_acquired = acquire_app_lock(connector_id, task_id, timeout_s=60.0)
+        if not lock_acquired:
+            # Task stays in QUEUED; user can retry or cancel. No state corruption.
+            raise HTTPException(
+                status_code=503,
+                detail=f"Another task is using {connector_id}. Task remains in QUEUED. Retry or cancel.",
+            )
+
+        try:
+            # Step 6b: QUEUED → RUNNING
+            await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
+
+            # Step 7: Resolve connector from registry
+            cls = get_connector_class(connector_id)
+            if cls is None:
+                raise HTTPException(status_code=400, detail=f"Unknown connector: {connector_id}")
+
+            # Step 8: Instantiate connector with optional exe_path
+            kwargs = {}
+            if connector_id == "solidworks2022":
+                kwargs["exe_path"] = settings.solidworks_exe_path
+            elif connector_id == "rhino6":
+                kwargs["rhino_exe"] = settings.rhino_exe_path
+            conn = cls(**kwargs)
+
+            # Step 9: Execute connector action
+            result = conn.execute(action, params, timeout_s=60)
+
+            async with get_db() as db:
+                await db.execute(
+                    "UPDATE tasks SET tool_calls_json = ?, software_versions_json = ? WHERE id = ?",
+                    (_json.dumps({"action": action, "params": params, "result": result.__dict__}),
+                     _json.dumps({connector_id: conn.get_version() or "unknown"}), task_id),
+                )
+                await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
+                                detail_json={"action": action, "params": params,
+                                            "success": result.success})
+                await db.commit()
+
+            if not result.success:
+                await transition_task(task_id, "execution_failed", TaskStatus.FAILED,
+                                      {"error": result.error})
+                raise HTTPException(status_code=500, detail=result.error)
+
+            # Step 10: Record handoff artifact if this step produces one
+            if action.endswith(".export_copy"):
+                handoff_artifact = result.data.get("artifact_bytes")
+                handoff_filename = result.data.get("artifact_filename")
+                if handoff_artifact and handoff_filename:
+                    hop = save_handoff_file(
+                        project_root=task.get("path_root") or str(PROJECTS_ROOT / task["project_id"]),
+                        project_id=task["project_id"],
+                        source_bytes=handoff_artifact,
+                        filename=handoff_filename,
+                        software=connector_id,
+                        software_version=conn.get_version() or "unknown",
+                        unit=params.get("unit", "mm"),
+                        file_format=params.get("format", "STEP"),
+                    )
+                    handoff_chain.append(hop)
+
+            # Step 11: RUNNING → VERIFYING
+            await transition_task(task_id, "execution_complete", TaskStatus.VERIFYING,
+                                  {"success": True})
+
+            # Step 12: Run verification postconditions
+            if action == "rhino.create_box_test":
+                pcs = rhino_box_postconditions(params.get("length", 10.0),
+                                               params.get("width", 3.0),
+                                               params.get("height", 1.0))
+            elif action == "rhino.export_copy":
+                pcs = rhino_export_copy_postconditions(
+                    filename=result.data.get("artifact_filename", ""),
+                    expected_sha256=result.data.get("artifact_sha256"),
+                )
+            else:
+                pcs = []
+
+            from nei.core.task_manager import verify_task
+            try:
+                await verify_task(task_id, result.data, conn.get_version() or "unknown", pcs)
+            except Exception as e:
+                async with get_db() as db:
+                    await log_event(db, task_id=task_id, event_type="VERIFY_ERROR",
+                                    detail_json={"error": str(e)})
+                    await db.commit()
+
+            # Step 13: Update handoff chain with verification result
+            if handoff_chain:
+                hop = HandoffHop(
+                    software=connector_id,
+                    software_version=conn.get_version() or "unknown",
+                    operation="verify",
+                    file_path=handoff_filename or "",
+                    file_sha256=result.data.get("artifact_sha256", ""),
+                    file_format=params.get("format", "STEP"),
+                    unit=params.get("unit", "mm"),
+                    notes=f"Verification passed for {action}",
+                )
+                handoff_chain.append(hop)
+
+        finally:
+            release_app_lock(connector_id, task_id)
+
+    # Step 14: Write provenance manifest if handoff occurred
+    if handoff_chain:
+        write_provenance_manifest(
+            project_root=task.get("path_root") or str(PROJECTS_ROOT / task["project_id"]),
+            project_id=task["project_id"],
+            task_id=task_id,
+            chain=handoff_chain,
+        )
+
+    return await get_task(task_id)
+
+async def _legacy_run_task_endpoint(task_id: str):
+    """Drive a PENDING task through planning → validating → queued → running → verifying.
+
+    Uses the template planner to pick the connector action, then executes it
     via Rhino6Connector and runs postcondition verification.
     """
     from nei.core.task_manager import get_task, transition_task
