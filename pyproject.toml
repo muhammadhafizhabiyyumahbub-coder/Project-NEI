@@ -14,6 +14,7 @@ dependencies = [
     "pint>=0.20",
     "aiosqlite>=0.19",
     "python-dotenv>=1.0",
+    "pywin32>=306; sys_platform == 'win32'",
     "sse-starlette>=1.6",
 ]
 

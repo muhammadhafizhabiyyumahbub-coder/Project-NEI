@@ -73,14 +73,16 @@ async def inspect_connector(connector_id: str, operation: str = "document_info")
         raise HTTPException(status_code=404, detail="Inspection unavailable")
     if operation not in ("document_info", "features"):
         raise HTTPException(status_code=400, detail="Unknown inspection operation")
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "code": "SOLIDWORKS_COM_UNAVAILABLE",
-            "operation": operation,
-            "message": "Read-only document inspection requires a validated live SOLIDWORKS COM session",
-        },
-    )
+    from nei.connectors.solidworks2022 import SolidWorks2022Connector
+    from nei.core.config import settings
+    result = SolidWorks2022Connector(settings.solidworks_exe_path).inspect_active_document(operation)
+    if not result.get("available"):
+        raise HTTPException(
+            status_code=503,
+            detail={"code": result.get("error", "SOLIDWORKS_COM_UNAVAILABLE"),
+                    "operation": operation, **result},
+        )
+    return {"connector_id": connector_id, "operation": operation, "data": result}
 
 
 @router.post("/connectors/{connector_id}/probe")
@@ -102,10 +104,12 @@ async def probe_connector(connector_id: str):
                 (connector_id, conn.name, status, ts, det.version, det.exe_path),
             )
             await db.commit()
+        com = conn.com_probe()
         return {
             "connector_id": connector_id, "detected": det.detected,
             "version": det.version, "exe_path": det.exe_path,
             "probe_ts": ts, "note": det.notes,
+            "com": com,
             "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
         }
 

@@ -57,6 +57,49 @@ class SolidWorks2022Connector(BaseConnector):
     def get_version(self) -> Optional[str]:
         return self.detect().version
 
+    def com_probe(self) -> dict:
+        """Attach to already-running SOLIDWORKS only; never launch an instance."""
+        try:
+            import win32com.client
+            app = win32com.client.GetActiveObject("SldWorks.Application")
+            return {
+                "available": True,
+                "version": str(getattr(app, "RevisionNumber", "")) or None,
+                "visible": bool(getattr(app, "Visible", False)),
+                "note": "Attached to existing SOLIDWORKS instance; no document opened",
+            }
+        except Exception as exc:
+            return {
+                "available": False,
+                "version": None,
+                "visible": None,
+                "error": type(exc).__name__,
+                "note": "No active SOLIDWORKS COM automation object; no instance launched",
+            }
+
+    def inspect_active_document(self, operation: str = "document_info") -> dict:
+        """Inspect current active document without opening or changing it."""
+        if operation not in ("document_info", "features"):
+            raise ValueError(f"Unknown inspection operation: {operation}")
+        try:
+            import win32com.client
+            app = win32com.client.GetActiveObject("SldWorks.Application")
+            doc = app.ActiveDoc
+            if doc is None:
+                return {"available": False, "error": "NO_ACTIVE_DOCUMENT"}
+            if operation == "document_info":
+                return {
+                    "available": True,
+                    "title": str(doc.GetTitle()),
+                    "path": str(doc.GetPathName()),
+                    "type": int(doc.GetType()),
+                    "read_only": bool(doc.IsOpenedReadOnly()),
+                }
+            count = int(doc.GetFeatureCount())
+            return {"available": True, "feature_count": count}
+        except Exception as exc:
+            return {"available": False, "error": type(exc).__name__}
+
     def get_capabilities(self) -> list[Capability]:
         version = self.get_version()
         tested = version or None
