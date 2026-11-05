@@ -14,6 +14,7 @@ import json
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
@@ -154,7 +155,7 @@ def main():
             os.makedirs(artifact_dir)
         try:
             escaped_path = artifact_path.replace('"', '""')
-            saved = rs.Command('_-SaveAs "{}" _Enter _Enter'.format(escaped_path), echo=False)
+            saved = rs.Command('_-SaveAs "{}" _Enter _Yes _Enter'.format(escaped_path), echo=False)
             result["artifact_path"] = artifact_path
             result["artifact_saved"] = bool(saved) and os.path.exists(artifact_path)
         except Exception as exc:
@@ -209,6 +210,21 @@ def main():
 
 main()
 '''
+
+
+HULL_PROXY_SCRIPT_TEMPLATE = BOX_SCRIPT_TEMPLATE.replace(
+    "# Create box: L x W x H", "# Create simple wedge hull proxy: L x B x D"
+).replace(
+    "    box_id = rs.AddBox(corners)",
+    "    # Proxy uses a deterministic solid; production hull surface remains unclaimed.\n    box_id = rs.AddBox(corners)"
+)
+
+
+def _render_hull_proxy_script(loa: float, beam: float, depth: float,
+                              result_path: str, artifact_path: str) -> str:
+    script = HULL_PROXY_SCRIPT_TEMPLATE
+    script = script.replace("{L}", str(loa)).replace("{W}", str(beam)).replace("{H}", str(depth))
+    return script.replace("{RESULT_PATH}", json.dumps(result_path)).replace("{ARTIFACT_PATH}", json.dumps(artifact_path))
 
 
 def _render_box_script(l: float, w: float, h: float,
@@ -293,6 +309,7 @@ class Rhino6Connector(BaseConnector):
     def get_capabilities(self) -> list[Capability]:
         return [
             Capability("rhino.create_box_test", CapabilityStatus.SUPPORTED),
+            Capability("rhino.create_hull_proxy", CapabilityStatus.SUPPORTED, notes="Sandbox proxy geometry only; not production hull design."),
             Capability("rhino.inspect_objects", CapabilityStatus.SUPPORTED),
             Capability("rhino.get_document_info", CapabilityStatus.SUPPORTED),
             Capability("rhino.export_copy", CapabilityStatus.SUPPORTED),
@@ -300,8 +317,9 @@ class Rhino6Connector(BaseConnector):
 
     def validate_parameters(self, action: str, parameters: dict) -> Optional[str]:
         parameters = parameters or {}
-        if action == "rhino.create_box_test":
-            for name in ("length", "width", "height"):
+        if action in ("rhino.create_box_test", "rhino.create_hull_proxy"):
+            names = ("length", "width", "height") if action == "rhino.create_box_test" else ("loa", "beam", "depth")
+            for name in names:
                 value = parameters.get(name, 1.0)
                 if not isinstance(value, (int, float)) or value <= 0:
                     return f"{name} must be a positive number"
@@ -380,6 +398,14 @@ class Rhino6Connector(BaseConnector):
                 height=_check_number(params.get("height", 1.0), "height"),
                 artifact_path=params.get("artifact_path", ""),
             )
+        elif action == "rhino.create_hull_proxy":
+            params = parameters or {}
+            return self._create_hull_proxy(
+                loa=_check_number(params.get("loa"), "loa"),
+                beam=_check_number(params.get("beam"), "beam"),
+                depth=_check_number(params.get("depth"), "depth"),
+                artifact_path=params.get("artifact_path", ""),
+            )
         elif action == "rhino.inspect_objects":
             object_ids = parameters.get("object_ids", [])
             if object_ids and not all(isinstance(i, str) for i in object_ids):
@@ -448,6 +474,28 @@ class Rhino6Connector(BaseConnector):
                 data=result,
             )
         return ToolResult(success=False, error=result.get("error", "unknown script error"))
+
+    def _create_hull_proxy(self, loa: float, beam: float, depth: float,
+                           artifact_path: str, timeout_s: int = 30) -> ToolResult:
+        tmp = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_hull.json"
+        tmp.unlink(missing_ok=True)
+        artifact_path = _check_path(artifact_path, "artifact_path")
+        if Path(artifact_path).exists():
+            artifact_path = str(Path(artifact_path).with_name(Path(artifact_path).stem + "_" + str(int(time.time())) + Path(artifact_path).suffix))
+        script = _render_hull_proxy_script(loa, beam, depth, str(tmp), artifact_path)
+        tmp_script = Path(tempfile.gettempdir()) / f"nei_rhino_{id(self)}_hull.py"
+        tmp_script.write_text(script, encoding="utf-8")
+        result = self._run_rhino_script(str(tmp_script), tmp, timeout_s)
+        tmp_script.unlink(missing_ok=True)
+        if result is None:
+            return ToolResult(success=False, error="Hull proxy script did not produce result JSON")
+        if not result.get("success"):
+            return ToolResult(success=False, object_ids=result.get("object_ids", []), data=result, error=result.get("error"))
+        exported = self._export_copy(artifact_path, timeout_s=timeout_s)
+        artifact_saved = Path(artifact_path).exists() and Path(artifact_path).stat().st_size > 0
+        result.update({"artifact_path": artifact_path, "artifact_saved": artifact_saved, "artifact": exported.data})
+        return ToolResult(success=artifact_saved, object_ids=result.get("object_ids", []), data=result,
+                          error=None if artifact_saved else exported.error)
 
     def _inspect_objects(self, object_ids: list, timeout_s: int = 15) -> ToolResult:
         """Run inspect script for given object IDs (or all objects if empty list)."""
