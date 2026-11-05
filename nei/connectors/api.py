@@ -158,6 +158,8 @@ async def probe_connector(connector_id: str):
         kwargs["exe_path"] = settings.solidworks_exe_path
     elif connector_id == "rhino6":
         kwargs["rhino_exe"] = settings.rhino_exe_path
+    elif connector_id == "maxsurf20":
+        kwargs["exe_path"] = settings.maxsurf_exe_path
     conn = cls(**kwargs)
 
     det = conn.detect()
