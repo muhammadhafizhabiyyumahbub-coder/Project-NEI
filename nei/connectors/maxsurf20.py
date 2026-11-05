@@ -6,6 +6,7 @@ so connector stays read-only until file exchange is proven.
 """
 from pathlib import Path
 from typing import Optional
+import hashlib
 from nei.connectors.base import (
     BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
     Capability, CapabilityStatus,
@@ -63,6 +64,7 @@ class Maxsurf20Connector(BaseConnector):
         if not path or not Path(path).exists():
             return ToolResult(success=False, error=f"File not found: {path}")
         p = Path(path)
+        digest = hashlib.sha256(p.read_bytes()).hexdigest()
         return ToolResult(
             success=True,
             data={
@@ -71,8 +73,24 @@ class Maxsurf20Connector(BaseConnector):
                 "size_bytes": p.stat().st_size,
                 "modified": p.stat().st_mtime,
                 "format": p.suffix.lower(),
+                "sha256": digest,
+                "read_only": True,
+                "maxsurf_process_detected": any("Maxsurf" in str(x) for x in self._running_processes()),
             },
         )
+
+    @staticmethod
+    def _running_processes() -> list[str]:
+        import subprocess
+        try:
+            output = subprocess.check_output(
+                ["powershell", "-NoProfile", "-Command", "Get-Process | Select-Object -ExpandProperty ProcessName"],
+                text=True,
+                timeout=5,
+            )
+            return output.splitlines()
+        except (OSError, subprocess.SubprocessError):
+            return []
 
     def _import_copy(self, parameters: dict) -> ToolResult:
         """L1: copy a source file into the Maxsurf workspace.
