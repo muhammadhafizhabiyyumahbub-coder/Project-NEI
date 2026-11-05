@@ -71,8 +71,12 @@ class BaseConnector(ABC):
         ...
 
     def get_capabilities(self) -> list[Capability]:
-        """Return advertised action capabilities; empty means connector-specific validation."""
+        """Return advertised action capabilities."""
         return []
+
+    def validate_parameters(self, action: str, parameters: dict) -> Optional[str]:
+        """Return validation error before execution, or None when valid."""
+        return None
 
     @abstractmethod
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:

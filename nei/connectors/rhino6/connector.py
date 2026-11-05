@@ -274,6 +274,25 @@ class Rhino6Connector(BaseConnector):
         self._version: Optional[str] = None
 
     # ── BaseConnector ──────────────────────────────────────────────────────────
+    def get_capabilities(self) -> list[Capability]:
+        return [
+            Capability("rhino.create_box_test", CapabilityStatus.SUPPORTED),
+            Capability("rhino.inspect_objects", CapabilityStatus.SUPPORTED),
+            Capability("rhino.get_document_info", CapabilityStatus.SUPPORTED),
+            Capability("rhino.export_copy", CapabilityStatus.SUPPORTED),
+        ]
+
+    def validate_parameters(self, action: str, parameters: dict) -> Optional[str]:
+        parameters = parameters or {}
+        if action == "rhino.create_box_test":
+            for name in ("length", "width", "height"):
+                value = parameters.get(name, 1.0)
+                if not isinstance(value, (int, float)) or value <= 0:
+                    return f"{name} must be a positive number"
+        if action == "rhino.export_copy" and not isinstance(parameters.get("artifact_path", ""), str):
+            return "artifact_path must be a string"
+        return None
+
 
     def detect(self) -> DetectionResult:
         path = Path(self._rhino_exe)

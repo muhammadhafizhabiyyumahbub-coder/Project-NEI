@@ -462,8 +462,11 @@ async def run_task_endpoint(task_id: str):
             capability = capabilities.get(action)
             if capability in {"UNSUPPORTED", "UNAVAILABLE"}:
                 raise HTTPException(status_code=400, detail=f"Capability unavailable: {action}")
-            if capability is None and not action.startswith("rhino."):
+            if capability is None:
                 raise HTTPException(status_code=400, detail=f"Capability unknown: {action}")
+            parameter_error = conn.validate_parameters(action, params)
+            if parameter_error:
+                raise HTTPException(status_code=400, detail=parameter_error)
 
             # Step 10: Execute connector action
             result = conn.execute(action, params, timeout_s=60)
