@@ -10,6 +10,15 @@ from nei.core.database import get_db
 
 router = APIRouter()
 
+def _capability_dict(capability):
+    return {
+        "name": capability.name,
+        "status": capability.status.value,
+        "version_tested": capability.version_tested,
+        "notes": capability.notes,
+    }
+
+
 CONNECTORS = [
     {"id": "rhino6", "name": "Rhino 6", "transport": "RhinoPython Method 2"},
     {"id": "solidworks2022", "name": "SOLIDWORKS 2022", "transport": "COM"},
@@ -40,6 +49,17 @@ async def get_connector(connector_id: str):
     raise HTTPException(status_code=404, detail="Connector not found")
 
 
+@router.get("/connectors/{connector_id}/capabilities")
+async def connector_capabilities(connector_id: str):
+    """Return version-tested capability status without activating CAD software."""
+    if connector_id == "solidworks2022":
+        from nei.connectors.solidworks2022 import SolidWorks2022Connector
+        conn = SolidWorks2022Connector()
+        return {"connector_id": connector_id,
+                "capabilities": [c.__dict__ for c in conn.get_capabilities()]}
+    raise HTTPException(status_code=404, detail="Capability report unavailable")
+
+
 @router.post("/connectors/{connector_id}/probe")
 async def probe_connector(connector_id: str):
     """Probe a connector: real detect/version for rhino6, mock for others."""
@@ -62,6 +82,7 @@ async def probe_connector(connector_id: str):
             "connector_id": connector_id, "detected": det.detected,
             "version": det.version, "exe_path": det.exe_path,
             "probe_ts": ts, "note": det.notes,
+            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
         }
 
     if connector_id != "rhino6":

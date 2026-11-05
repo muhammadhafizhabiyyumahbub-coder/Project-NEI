@@ -8,7 +8,10 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from nei.connectors.base import BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult
+from nei.connectors.base import (
+    BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
+    Capability, CapabilityStatus,
+)
 
 
 class SolidWorks2022Connector(BaseConnector):
@@ -45,6 +48,18 @@ class SolidWorks2022Connector(BaseConnector):
 
     def get_version(self) -> Optional[str]:
         return self.detect().version
+
+    def get_capabilities(self) -> list[Capability]:
+        version = self.get_version()
+        tested = version or None
+        return [
+            Capability("sw.detect", CapabilityStatus.SUPPORTED, tested, "Filesystem probe; no COM"),
+            Capability("sw.get_version", CapabilityStatus.SUPPORTED, tested, "Executable version resource"),
+            Capability("sw.health_check", CapabilityStatus.SUPPORTED, tested, "Filesystem availability only"),
+            Capability("sw.get_document_info", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
+            Capability("sw.list_features", CapabilityStatus.UNKNOWN, tested, "Requires live COM/document probe"),
+            Capability("sw.create_test_part", CapabilityStatus.UNSUPPORTED, tested, "Write operation deferred"),
+        ]
 
     def health_check(self) -> HealthResult:
         detection = self.detect()
