@@ -468,8 +468,17 @@ async def run_task_endpoint(task_id: str):
             if parameter_error:
                 raise HTTPException(status_code=400, detail=parameter_error)
 
-            # Step 10: Execute connector action
-            result = conn.execute(action, params, timeout_s=60)
+            # Step 10: Execute connector action; unexpected connector errors fail task.
+            try:
+                result = conn.execute(action, params, timeout_s=60)
+            except TimeoutError as exc:
+                await transition_task(task_id, "execution_timeout", TaskStatus.FAILED,
+                                      {"action": action, "error": str(exc) or "connector timeout"})
+                raise HTTPException(status_code=504, detail="Connector execution timed out") from exc
+            except Exception as exc:
+                await transition_task(task_id, "execution_exception", TaskStatus.FAILED,
+                                      {"action": action, "error": type(exc).__name__})
+                raise HTTPException(status_code=500, detail="Connector execution failed") from exc
 
             async with get_db() as db:
                 await db.execute(
@@ -484,8 +493,8 @@ async def run_task_endpoint(task_id: str):
 
             if not result.success:
                 await transition_task(task_id, "execution_failed", TaskStatus.FAILED,
-                                      {"error": result.error})
-                raise HTTPException(status_code=500, detail=result.error)
+                                      {"action": action, "error": result.error})
+                raise HTTPException(status_code=500, detail=result.error or "Connector execution failed")
 
             # Step 10: Record handoff artifact if this step produces one
             if action.endswith(".export_copy"):
