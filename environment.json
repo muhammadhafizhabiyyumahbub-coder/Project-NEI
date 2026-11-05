@@ -45,7 +45,10 @@
     "service_pack": "UNVERIFIED",
     "running": true,
     "running_pid": 20824,
-    "com_class": "UNVERIFIED (pywin32 not installed; no COM activation attempted)",
+    "com_class": "SldWorks.Application (VERIFIED pywin32 attach successful)",
+   "com_version": "30.1.0",
+   "com_visible": true,
+   "com_automation": "Active document read-only inspection available; GetTitle(), GetPathName(), GetType(), IsOpenedReadOnly() working",
     "license_status": "UNVERIFIED",
     "license_note": "Registry keys SOLIDWORKS 2022 and SOLIDWORKS PCB present. License state unconfirmed."
   },
@@ -97,12 +100,39 @@
   "phase_0_conclusion": {
     "status": "COMPLETE",
     "rhino6_bitness": "64-bit (RESOLVED)",
-    "rhino6_transport_method": "RhinoPython Method 2 (PASSED box test via manual execution inside Rhino)",
-    "rhino6_cli_invocation": "UNVERIFIED — 2026-11-04: 10 live attempts of /runscript + -_RunPythonScript all failed; Rhino did not process runscript (see docs/spike/rhino_cli_test.md)",
+    "rhino6_transport_method": "Method 4: Passive file-based listener (VERIFIED Alpha 0.1). Rhino runs open; listener.py timer watches command.json; backend polls result.json. Box 10×3×1 created, 4/4 postconditions PASSED.",
+    "rhino6_cli_invocation": "FAILED — 2026-11-04: 10 live attempts of /runscript + -_RunPythonScript all timed out, exit code 1. Single-instance zombie. Not viable on this machine.",
     "dashboard_hosting": "Separate Vite (port 5173) + FastAPI static (DECIDED)",
     "python_version": "3.13.7 (system default, all libs compatible)",
     "maxsurf_actual_version": "Maxsurf 20 V8i (not Enterprise v8.1)",
     "ready_for_phase_1": true
+  },
+  "phase_3_conclusion": {
+    "status": "ALPHA 0.1 COMPLETE",
+    "rhino_connector": "Passive listener transport verified end-to-end",
+    "box_creation": "10×3×1 box created in active document, bounding box correct",
+    "verification": "4/4 postconditions PASSED (object_count, object_type, bounding_box, document_units)",
+    "api_orchestration": "POST /tasks/{id}/run: PENDING→PLANNING→VALIDATING→QUEUED→RUNNING→VERIFYING→COMPLETED",
+    "test_coverage": "105 backend tests + 2 E2E (Playwright) PASSED",
+    "transport_setup": "Tools > Options > General startup command: _-RunPythonScript \"D:\\Project NEI\\nei\\connectors\\rhino6\\listener.py\""
+  },
+  "phase_5_conclusion": {
+    "status": "COMPLETE",
+    "unit_framework": "Pint-based quantity parser in calculator engine; accepts '10 mm', '5 kg', returns SI base units (m, kg, s)",
+    "calculator_tests": "12 tests PASSED; reference case verification working",
+    "endpoint": "POST /api/v1/calculations with string quantities",
+    "ui": "Calculations.tsx research mode explicit checkbox, unit input placeholders"
+  },
+  "phase_6_conclusion": {
+    "status": "IN PROGRESS",
+    "solidworks_detection": "Filesystem probe + registry check; SLDWORKS.exe found at D:\\SolidWork\\SW\\SOLIDWORKS\\SLDWORKS.exe",
+    "solidworks_version": "30.1.0.0082 (from executable ProductVersion)",
+    "com_attach": "pywin32 installed; Win32COM GetActiveObject('SldWorks.Application') VERIFIED",
+    "com_active_instance": "SOLIDWORKS running PID 20824; visible, automation enabled",
+    "read_only_inspection": "GET /api/v1/connectors/solidworks2022/inspect?operation=document_info returns title, path, type, read_only flag when active document exists",
+    "capability_report": "GET /api/v1/connectors/solidworks2022/capabilities lists 6 operations: sw.detect (SUPPORTED), sw.get_version (SUPPORTED), sw.health_check (SUPPORTED), sw.get_document_info (UNKNOWN→SUPPORTED when COM active), sw.list_features (UNKNOWN→SUPPORTED when COM active), sw.create_test_part (UNSUPPORTED)",
+    "test_coverage": "121 tests PASSED; 1 skipped (COM probe session variance)",
+    "constraints": "No COM activation attempt; no document open/close; no file mutation; read-only attach only"
   },
   "note": "regenerated_at"
 }
