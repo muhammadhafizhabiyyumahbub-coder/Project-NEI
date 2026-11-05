@@ -18,9 +18,9 @@ def test_get_capabilities():
     caps = {c.name: c.status.value for c in Maxsurf20Connector().get_capabilities()}
     assert caps["maxsurf.detect"] == "SUPPORTED"
     assert caps["maxsurf.get_version"] == "SUPPORTED"
-    assert caps["maxsurf.inspect_project_file"] == "UNKNOWN"
-    assert caps["maxsurf.import_copy"] == "UNKNOWN"
-    assert caps["maxsurf.export_copy"] == "UNKNOWN"
+    assert caps["maxsurf.inspect_project_file"] == "SUPPORTED"
+    assert caps["maxsurf.import_copy"] == "SUPPORTED"
+    assert caps["maxsurf.export_copy"] == "SUPPORTED"
 
 
 def test_inspect_project_file():

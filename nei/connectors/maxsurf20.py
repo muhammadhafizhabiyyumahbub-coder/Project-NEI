@@ -149,7 +149,7 @@ class Maxsurf20Connector(BaseConnector):
         return [
             Capability("maxsurf.detect", CapabilityStatus.SUPPORTED, None, "Filesystem probe"),
             Capability("maxsurf.get_version", CapabilityStatus.SUPPORTED, None, "Executable version"),
-            Capability("maxsurf.inspect_project_file", CapabilityStatus.UNKNOWN, None, "L0 read metadata"),
-            Capability("maxsurf.import_copy", CapabilityStatus.UNKNOWN, None, "L1 file exchange"),
-            Capability("maxsurf.export_copy", CapabilityStatus.UNKNOWN, None, "L1 file exchange"),
+            Capability("maxsurf.inspect_project_file", CapabilityStatus.SUPPORTED, "20.00.01.59", "Read-only .msd metadata and SHA-256 verified on sandbox probe."),
+            Capability("maxsurf.import_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox copy verified; original checksum unchanged."),
+            Capability("maxsurf.export_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox artifact copy verified by matching SHA-256."),
         ]
