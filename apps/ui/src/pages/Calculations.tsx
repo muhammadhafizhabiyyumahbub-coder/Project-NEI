@@ -12,6 +12,7 @@ export function Calculations() {
   const [inputsJson, setInputsJson] = useState("{}");
   const [runResult, setRunResult] = useState<CalcRun | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [research, setResearch] = useState(false);
   const [running, setRunning] = useState(false);
 
   async function doRun() {
@@ -20,7 +21,7 @@ export function Calculations() {
     setRunError(null);
     try {
       const parsed: Record<string, unknown> = JSON.parse(inputsJson || "{}");
-      const r = await runCalculation({ formula_id: selected.id, inputs: parsed, research: true });
+      const r = await runCalculation({ formula_id: selected.id, inputs: parsed, research });
       setRunResult(r);
       refetch();
     } catch (e) {
@@ -62,10 +63,18 @@ export function Calculations() {
             <textarea
               value={inputsJson}
               onChange={(e) => setInputsJson(e.target.value)}
-              placeholder='{"length": 10, "width": 3, "height": 1}'
+              placeholder='{"length": "10 m", "width": "3 m", "height": "1 m"}'
               className="w-full p-2 border rounded font-mono text-sm"
               rows={3}
             />
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={research}
+                onChange={(e) => setResearch(e.target.checked)}
+              />
+              Research mode (allows non-approved formulas; result is UNVERIFIED)
+            </label>
           </div>
           <button onClick={doRun} disabled={running} className="px-3 py-1 bg-primary text-primary-foreground rounded">
             {running ? "Running..." : "Run Calculation"}
