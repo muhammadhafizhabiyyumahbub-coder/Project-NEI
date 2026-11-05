@@ -459,6 +459,8 @@ async def run_task_endpoint(task_id: str):
             # Step 7: Resolve connector from registry
             cls = get_connector_class(connector_id)
             if cls is None:
+                await transition_task(task_id, "connector_unknown", TaskStatus.FAILED,
+                                      {"action": action, "connector": connector_id})
                 raise HTTPException(status_code=400, detail=f"Unknown connector: {connector_id}")
 
             # Step 8: Instantiate connector with optional exe_path
@@ -473,11 +475,17 @@ async def run_task_endpoint(task_id: str):
             capabilities = {cap.name: cap.status.value for cap in conn.get_capabilities()}
             capability = capabilities.get(action)
             if capability in {"UNSUPPORTED", "UNAVAILABLE"}:
+                await transition_task(task_id, "capability_unavailable", TaskStatus.FAILED,
+                                      {"action": action, "capability": capability})
                 raise HTTPException(status_code=400, detail=f"Capability unavailable: {action}")
             if capability is None:
+                await transition_task(task_id, "capability_unknown", TaskStatus.FAILED,
+                                      {"action": action})
                 raise HTTPException(status_code=400, detail=f"Capability unknown: {action}")
             parameter_error = conn.validate_parameters(action, params)
             if parameter_error:
+                await transition_task(task_id, "parameters_invalid", TaskStatus.FAILED,
+                                      {"action": action, "error": parameter_error})
                 raise HTTPException(status_code=400, detail=parameter_error)
 
             # Resolve validated input artifact before connector execution.
