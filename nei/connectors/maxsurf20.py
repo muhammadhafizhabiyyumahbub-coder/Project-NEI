@@ -152,4 +152,5 @@ class Maxsurf20Connector(BaseConnector):
             Capability("maxsurf.inspect_project_file", CapabilityStatus.SUPPORTED, "20.00.01.59", "Read-only .msd metadata and SHA-256 verified on sandbox probe."),
             Capability("maxsurf.import_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox copy verified; original checksum unchanged."),
             Capability("maxsurf.export_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox artifact copy verified by matching SHA-256."),
+            Capability("maxsurf.hull_generation", CapabilityStatus.UNKNOWN, "20.00.01.59", "No verified Maxsurf hull-generation exchange from NEI input."),
         ]
