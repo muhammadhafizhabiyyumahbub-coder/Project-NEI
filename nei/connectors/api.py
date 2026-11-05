@@ -192,6 +192,47 @@ async def probe_connector(connector_id: str):
     return response
 
 
+@router.get("/connectors/{connector_id}/evidence")
+async def list_connector_evidence(connector_id: str, capability: str = None):
+    """Return evidence records for a connector, optionally filtered by capability."""
+    async with get_db() as db:
+        if capability:
+            rows = await db.execute_fetchall(
+                """SELECT id, connector_id, capability_name, evidence_type, artifact_path,
+                          artifact_sha256, metadata_json, verified_at, verified_by, notes
+                   FROM connector_evidence
+                   WHERE connector_id = ? AND capability_name = ?
+                   ORDER BY verified_at DESC""",
+                (connector_id, capability),
+            )
+        else:
+            rows = await db.execute_fetchall(
+                """SELECT id, connector_id, capability_name, evidence_type, artifact_path,
+                          artifact_sha256, metadata_json, verified_at, verified_by, notes
+                   FROM connector_evidence
+                   WHERE connector_id = ?
+                   ORDER BY verified_at DESC""",
+                (connector_id,),
+            )
+    return {
+        "connector_id": connector_id,
+        "evidence": [
+            {
+                "id": r[0],
+                "capability_name": r[2],
+                "evidence_type": r[3],
+                "artifact_path": r[4],
+                "artifact_sha256": r[5],
+                "metadata": __import__("json").loads(r[6]) if r[6] else None,
+                "verified_at": r[7],
+                "verified_by": r[8],
+                "notes": r[9],
+            }
+            for r in rows
+        ],
+    }
+
+
 async def _mock_probe(connector_id: str) -> dict:
     """Fallback mock probe for connectors without a real implementation yet."""
     ts = datetime.now(timezone.utc).isoformat()
