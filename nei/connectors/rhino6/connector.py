@@ -149,7 +149,9 @@ def main():
     import os
     artifact_path = {ARTIFACT_PATH}
     if artifact_path:
-        os.makedirs(os.path.dirname(artifact_path), exist_ok=True)
+        artifact_dir = os.path.dirname(artifact_path)
+        if artifact_dir and not os.path.isdir(artifact_dir):
+            os.makedirs(artifact_dir)
         Rhino.RhinoDoc.ActiveDoc.SaveAs(artifact_path, 0)
 
 main()
@@ -242,7 +244,9 @@ def main():
             json.dump(result, f)
         return
 
-    os.makedirs(os.path.dirname(artifact_path), exist_ok=True)
+    artifact_dir = os.path.dirname(artifact_path)
+    if artifact_dir and not os.path.isdir(artifact_dir):
+        os.makedirs(artifact_dir)
     # SaveAs copies the active doc to a new file (does not modify the doc)
     ok = doc.SaveAs(artifact_path, 0)
     if not ok:
