@@ -250,6 +250,13 @@ export async function getEvidenceSource(id: string): Promise<EvidenceSource> {
   return http(`/evidence/sources/${id}`);
 }
 
+export async function getConnectorEvidence(connectorId: string, capability?: string): Promise<{ connector_id: string; evidence: { id: string; capability_name: string; evidence_type: string; artifact_path: string; artifact_sha256: string; metadata: any; verified_at: string; verified_by: string; notes: string }[] }> {
+  const url = capability
+    ? `/connectors/${connectorId}/evidence?capability=${encodeURIComponent(capability)}`
+    : `/connectors/${connectorId}/evidence`;
+  return http(url);
+}
+
 export async function searchEvidence(query: string, sourceId?: string, limit = 20) {
   return http<EvidenceSearchResult[]>("/evidence/search", {
     method: "POST",
