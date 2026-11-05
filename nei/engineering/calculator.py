@@ -23,21 +23,25 @@ def _sha256(s: str) -> str:
 
 
 # ── Registry of formula implementations ─────────────────────────────────────
-# Maps formula name → callable(**named_args) -> value (deterministic, no I/O)
+# Maps formula name → callable(*named_args) -> value (deterministic, no I/O)
 FORMULA_REGISTRY: dict[str, dict] = {}
 
 
 def register_formula(name: str, fn: Callable, param_names: list[str],
-                     description: str = ""):
+                     description: str = "",
+                     param_units: Optional[dict] = None):
     """Register a Python implementation for a formula name.
 
     param_names: list of input keys that map 1:1 to fn positional args, in order.
     The caller passes inputs as a dict; missing required keys → INVALID.
+    param_units: optional {param_name: target_si_unit} — string quantity
+    inputs (e.g. "10 mm") are parsed to canonical SI before calling fn.
     """
     FORMULA_REGISTRY[name] = {
         "fn": fn,
         "param_names": param_names,
         "description": description,
+        "param_units": param_units or {},
     }
 
 
@@ -47,24 +51,53 @@ def _load_standard_formulas():
     from nei.engineering.hydrostatics import formulas as hyd
 
     register_formula("box_volume", geo.box_volume,
-                     ["length", "width", "height"], "Box volume: L*W*H (m^3)")
+                     ["length", "width", "height"],
+                     "Box volume: L*W*H (m^3)",
+                     param_units={"length": "m", "width": "m", "height": "m"})
     register_formula("box_surface_area", geo.box_surface_area,
-                     ["length", "width", "height"], "Box surface area")
+                     ["length", "width", "height"],
+                     "Box surface area",
+                     param_units={"length": "m", "width": "m", "height": "m"})
     register_formula("displacement_volume", geo.displacement_volume,
-                     ["loa", "beam", "draft"], "V_block = L*B*T")
+                     ["loa", "beam", "draft"],
+                     "V_block = L*B*T",
+                     param_units={"loa": "m", "beam": "m", "draft": "m"})
     register_formula("metacentric_height", hyd.metacentric_height,
-                     ["km", "kg"], "GM = KM - KG")
+                     ["km", "kg"],
+                     "GM = KM - KG",
+                     param_units={"km": "m", "kg": "m"})
     register_formula("initial_stability", hyd.initial_stability_indicator,
-                     ["gm"], "GM sign → stability")
+                     ["gm"],
+                     "GM sign → stability",
+                     param_units={"gm": "m"})
     register_formula("hydrostatic_pressure", hyd.hydrostatic_pressure,
-                     ["density", "g", "depth"], "P = rho*g*h")
+                     ["density", "g", "depth"],
+                     "P = rho*g*h",
+                     param_units={"density": "kg/m^3", "depth": "m"})
+
+
+def _parse_inputs(impl: dict, raw_inputs: dict) -> dict:
+    """Parse string quantity inputs to canonical SI per the formula's param_units.
+
+    - String values: parse via unit framework, reject unknown/malformed units.
+    - Numeric values: pass through unchanged (caller already in canonical SI).
+    - None: pass through (missing-input check handles it downstream).
+    """
+    from nei.engineering.units.framework import parse_quantity
+    out: dict = dict(raw_inputs)
+    for param, target in impl.get("param_units", {}).items():
+        v = out.get(param)
+        if isinstance(v, str):
+            out[param] = parse_quantity(v, target)
+    return out
 
 
 def _call_formula(impl: dict, inputs: dict):
     """Call a registered formula with a dict of inputs, mapped to named args."""
-    args = [inputs.get(k) for k in impl["param_names"]]
+    parsed = _parse_inputs(impl, inputs)
+    args = [parsed.get(k) for k in impl["param_names"]]
     if any(a is None for a in args):
-        missing = [k for k in impl["param_names"] if inputs.get(k) is None]
+        missing = [k for k in impl["param_names"] if parsed.get(k) is None]
         raise ValueError(f"Missing required input(s): {missing}")
     return impl["fn"](*args)
 
