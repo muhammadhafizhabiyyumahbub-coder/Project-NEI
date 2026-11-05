@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from nei.main import app
@@ -19,36 +21,33 @@ def test_connector_evidence_recording():
     client = setup_db()
     
     # 1. Rhino evidence
-    rhino_id = record_rhino_hull_proxy_evidence(
+    rhino_id = asyncio.run(record_rhino_hull_proxy_evidence(
         artifact_path="data/projects/test/rhino_proxy.3dm",
         artifact_sha256="abc123rhino",
         dimensions={"length": 10.0, "beam": 2.0},
         object_type="Brep"
-    )
+    ))
     assert rhino_id
 
     # 2. SW evidence
-    sw_id = record_solidworks_inspection_evidence(
+    sw_id = asyncio.run(record_solidworks_inspection_evidence(
         document_info={"name": "test.SLDPRT", "path": "C:\\test.SLDPRT"},
         features={"count": 5}
-    )
+    ))
     assert sw_id
 
     # 3. Maxsurf evidence (mock file paths for test)
-    import hashlib
-    from pathlib import Path
-    
     tmp_file = Path("data/projects/test/maxsurf_tmp.msd")
     tmp_file.parent.mkdir(parents=True, exist_ok=True)
     tmp_file.write_bytes(b"maxsurf test")
     sha = hashlib.sha256(tmp_file.read_bytes()).hexdigest()
     
-    mx_id = record_maxsurf_probe_evidence(
+    mx_id = asyncio.run(record_maxsurf_probe_evidence(
         source_path=str(tmp_file),
         source_sha256=sha,
         import_path=str(tmp_file),
         export_path=str(tmp_file)
-    )
+    ))
     assert mx_id
 
     # 4. Verify via API

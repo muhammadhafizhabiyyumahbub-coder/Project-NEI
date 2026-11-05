@@ -275,6 +275,17 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
             # Reflect the artifact in the connector result so verify can find it
             result.data["artifact_path"] = str(src)
             result.data["artifact_sha256"] = artifact_sha
+            # Link artifact evidence to the task so the audit trail is traceable
+            from nei.connectors.evidence import record_connector_evidence
+            await record_connector_evidence(
+                connector_id="rhino6",
+                capability_name=body.action,
+                evidence_type="artifact_exchange",
+                artifact_path=str(src),
+                artifact_sha256=artifact_sha,
+                metadata={"task_id": task_id, "action": body.action},
+                notes=f"Rhino action {body.action} produced artifact for task {task_id}",
+            )
 
     async with get_db() as db:
         await db.execute(

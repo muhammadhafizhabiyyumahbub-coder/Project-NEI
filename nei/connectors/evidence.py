@@ -12,7 +12,7 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def record_connector_evidence(
+async def record_connector_evidence(
     connector_id: str,
     capability_name: str,
     evidence_type: str,
@@ -23,48 +23,40 @@ def record_connector_evidence(
     verified_by: str = "system",
     notes: Optional[str] = None,
 ) -> str:
-    """Record verified probe artifact or inspection result.
-
-    Returns evidence record ID.
-    """
+    """Record verified probe artifact or inspection result. Returns evidence record ID."""
     import uuid
 
     evidence_id = str(uuid.uuid4())
     metadata_json = json.dumps(metadata) if metadata else None
 
-    async def _insert():
-        async with get_db() as db:
-            await db.execute(
-                """INSERT INTO connector_evidence
-                   (id, connector_id, capability_name, evidence_type, artifact_path,
-                    artifact_sha256, metadata_json, verified_at, verified_by, notes)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    evidence_id,
-                    connector_id,
-                    capability_name,
-                    evidence_type,
-                    artifact_path,
-                    artifact_sha256,
-                    metadata_json,
-                    _now(),
-                    verified_by,
-                    notes,
-                ),
-            )
-            await db.commit()
-
-    import asyncio
-
-    asyncio.run(_insert())
+    async with get_db() as db:
+        await db.execute(
+            """INSERT INTO connector_evidence
+               (id, connector_id, capability_name, evidence_type, artifact_path,
+                artifact_sha256, metadata_json, verified_at, verified_by, notes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                evidence_id,
+                connector_id,
+                capability_name,
+                evidence_type,
+                artifact_path,
+                artifact_sha256,
+                metadata_json,
+                _now(),
+                verified_by,
+                notes,
+            ),
+        )
+        await db.commit()
     return evidence_id
 
 
-def record_rhino_hull_proxy_evidence(
+async def record_rhino_hull_proxy_evidence(
     artifact_path: str, artifact_sha256: str, dimensions: dict, object_type: str
 ) -> str:
     """Record Rhino hull proxy probe evidence."""
-    return record_connector_evidence(
+    return await record_connector_evidence(
         connector_id="rhino6",
         capability_name="rhino.create_hull_proxy",
         evidence_type="sandbox_artifact",
@@ -75,11 +67,11 @@ def record_rhino_hull_proxy_evidence(
     )
 
 
-def record_solidworks_inspection_evidence(
+async def record_solidworks_inspection_evidence(
     document_info: dict, features: dict
 ) -> str:
     """Record SOLIDWORKS read-only inspection evidence."""
-    return record_connector_evidence(
+    return await record_connector_evidence(
         connector_id="solidworks2022",
         capability_name="sw.get_document_info",
         evidence_type="com_inspection",
@@ -88,7 +80,7 @@ def record_solidworks_inspection_evidence(
     )
 
 
-def record_maxsurf_probe_evidence(
+async def record_maxsurf_probe_evidence(
     source_path: str,
     source_sha256: str,
     import_path: Optional[str] = None,
@@ -111,7 +103,7 @@ def record_maxsurf_probe_evidence(
                 raise ValueError("Import/export checksum mismatch")
             metadata["import_sha256"] = import_sha
             metadata["export_sha256"] = export_sha
-    return record_connector_evidence(
+    return await record_connector_evidence(
         connector_id="maxsurf20",
         capability_name="maxsurf.import_copy",
         evidence_type="file_exchange",
