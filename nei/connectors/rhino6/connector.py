@@ -153,7 +153,8 @@ def main():
         if artifact_dir and not os.path.isdir(artifact_dir):
             os.makedirs(artifact_dir)
         try:
-            saved = rs.Command("_-SaveAs {} _Enter".format(artifact_path), echo=False)
+            escaped_path = artifact_path.replace('"', '""')
+            saved = rs.Command('_-SaveAs "{}" _Enter _Enter'.format(escaped_path), echo=False)
             result["artifact_path"] = artifact_path
             result["artifact_saved"] = bool(saved) and os.path.exists(artifact_path)
         except Exception as exc:
@@ -256,8 +257,10 @@ def main():
     artifact_dir = os.path.dirname(artifact_path)
     if artifact_dir and not os.path.isdir(artifact_dir):
         os.makedirs(artifact_dir)
-    # Use Rhino command to save a copy without changing active document path.
-    ok = rs.Command("_-SaveAs {} _Enter".format(artifact_path), echo=False)
+    # Rhino 6 command syntax: quoted path plus Yes for overwrite/options.
+    escaped_path = artifact_path.replace('"', '""')
+    command = '_-SaveAs "{}" _Enter _Enter'.format(escaped_path)
+    ok = rs.Command(command, echo=False)
     if not ok or not os.path.exists(artifact_path):
         result["error"] = "SaveAs failed"
     else:
