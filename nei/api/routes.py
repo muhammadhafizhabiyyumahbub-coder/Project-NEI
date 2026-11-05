@@ -480,6 +480,13 @@ async def run_task_endpoint(task_id: str):
             if parameter_error:
                 raise HTTPException(status_code=400, detail=parameter_error)
 
+            # Resolve validated input artifact before connector execution.
+            if step_idx > 0 and handoff_chain:
+                params.setdefault("input_artifact", handoff_chain[-1].file_path)
+                validate_handoff_artifact(
+                    handoff_chain[-1], task.get("path_root") or str(PROJECTS_ROOT), task["project_id"]
+                )
+
             # Step 10: Execute connector action; unexpected connector errors fail task.
             try:
                 result = conn.execute(action, params, timeout_s=60)
@@ -528,13 +535,6 @@ async def run_task_endpoint(task_id: str):
                     )
                     handoff_chain.append(hop)
 
-            # Downstream steps consume only the validated previous artifact.
-            if step_idx > 0 and handoff_chain:
-                params.setdefault("input_artifact", handoff_chain[-1].file_path)
-                validate_handoff_artifact(
-                    handoff_chain[-1], task.get("path_root") or str(PROJECTS_ROOT), task["project_id"]
-                )
-
             # Keep task RUNNING until all plan steps finish. Final verification is below.
 
         finally:
@@ -557,9 +557,7 @@ async def run_task_endpoint(task_id: str):
         )
     else:
         final_conditions = []
-    await verify_task(task_id, final_result, conn.get_version() or "unknown", final_conditions)
-
-    # Step 14: Write provenance manifest if handoff occurred
+    # Persist provenance before final verification can terminate execution.
     if handoff_chain:
         write_provenance_manifest(
             project_root=task.get("path_root") or str(PROJECTS_ROOT / task["project_id"]),
@@ -568,6 +566,7 @@ async def run_task_endpoint(task_id: str):
             chain=handoff_chain,
         )
 
+    await verify_task(task_id, final_result, conn.get_version() or "unknown", final_conditions)
     return await get_task(task_id)
 
 async def _legacy_run_task_endpoint(task_id: str):
