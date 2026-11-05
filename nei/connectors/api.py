@@ -11,6 +11,7 @@ from nei.core.database import get_db
 
 router = APIRouter()
 
+
 def _capability_dict(capability):
     return {
         "name": capability.name,
@@ -23,7 +24,7 @@ def _capability_dict(capability):
 CONNECTORS = [
     {"id": "rhino6", "name": "Rhino 6", "transport": "RhinoPython Method 2"},
     {"id": "solidworks2022", "name": "SOLIDWORKS 2022", "transport": "COM"},
-    {"id": "maxsurf_v8i", "name": "Maxsurf 20 V8i", "transport": "file exchange"},
+    {"id": "maxsurf20", "name": "Maxsurf 20 V8i", "transport": "file exchange"},
 ]
 
 
@@ -57,6 +58,11 @@ async def connector_capabilities(connector_id: str):
         from nei.connectors.solidworks2022 import SolidWorks2022Connector
         from nei.core.config import settings
         conn = SolidWorks2022Connector(settings.solidworks_exe_path)
+        return {"connector_id": connector_id,
+                "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
+    if connector_id == "maxsurf20":
+        from nei.connectors.maxsurf20 import Maxsurf20Connector
+        conn = Maxsurf20Connector()
         return {"connector_id": connector_id,
                 "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
     raise HTTPException(status_code=404, detail="Capability report unavailable")
@@ -110,6 +116,26 @@ async def probe_connector(connector_id: str):
             "version": det.version, "exe_path": det.exe_path,
             "probe_ts": ts, "note": det.notes,
             "com": com,
+            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
+        }
+
+    if connector_id == "maxsurf20":
+        from nei.connectors.maxsurf20 import Maxsurf20Connector
+        conn = Maxsurf20Connector()
+        det = conn.detect()
+        ts = datetime.now(timezone.utc).isoformat()
+        status = "DETECTED" if det.detected else "NOT_FOUND"
+        async with get_db() as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) VALUES (?, ?, ?, ?, ?, ?)",
+                (connector_id, conn.name, status, ts, det.version, det.exe_path),
+            )
+            await db.commit()
+        return {
+            "connector_id": connector_id, "detected": det.detected,
+            "version": det.version, "exe_path": det.exe_path,
+            "probe_ts": ts, "note": det.notes,
+            "com": None,
             "capabilities": [_capability_dict(c) for c in conn.get_capabilities()],
         }
 
