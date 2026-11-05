@@ -37,5 +37,8 @@ class Settings(BaseSettings):
     # Rhino 6
     rhino_exe_path: str = r"D:\Rhino 6\System\Rhino.exe"
 
+    # SOLIDWORKS 2022
+    solidworks_exe_path: str = r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe"
+
 
 settings = Settings()

@@ -18,8 +18,16 @@ class SolidWorks2022Connector(BaseConnector):
     connector_id = "solidworks2022"
     name = "SOLIDWORKS 2022"
 
+    def __init__(self, exe_path: Optional[str] = None):
+        self.exe_path = Path(exe_path) if exe_path else None
+
     def _candidate_paths(self) -> list[Path]:
+        if self.exe_path:
+            return [self.exe_path]
         candidates = []
+        configured = os.environ.get("NEI_SOLIDWORKS_EXE")
+        if configured:
+            candidates.append(Path(configured))
         for env in ("PROGRAMFILES", "PROGRAMW6432"):
             root = os.environ.get(env)
             if root:

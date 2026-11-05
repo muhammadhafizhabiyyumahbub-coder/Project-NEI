@@ -5,6 +5,7 @@ with real Rhino/SW/Maxsurf probes (kept as `connectors/{id}/probe` endpoint so
 frontend is stable across phases).
 """
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from nei.core.database import get_db
 
@@ -54,9 +55,10 @@ async def connector_capabilities(connector_id: str):
     """Return version-tested capability status without activating CAD software."""
     if connector_id == "solidworks2022":
         from nei.connectors.solidworks2022 import SolidWorks2022Connector
-        conn = SolidWorks2022Connector()
+        from nei.core.config import settings
+        conn = SolidWorks2022Connector(settings.solidworks_exe_path)
         return {"connector_id": connector_id,
-                "capabilities": [c.__dict__ for c in conn.get_capabilities()]}
+                "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
     raise HTTPException(status_code=404, detail="Capability report unavailable")
 
 
@@ -89,7 +91,8 @@ async def probe_connector(connector_id: str):
 
     if connector_id == "solidworks2022":
         from nei.connectors.solidworks2022 import SolidWorks2022Connector
-        conn = SolidWorks2022Connector()
+        from nei.core.config import settings
+        conn = SolidWorks2022Connector(settings.solidworks_exe_path)
         det = conn.detect()
         ts = datetime.now(timezone.utc).isoformat()
         status = "DETECTED" if det.detected else "NOT_FOUND"
