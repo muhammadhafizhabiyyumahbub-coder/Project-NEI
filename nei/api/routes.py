@@ -404,11 +404,22 @@ async def run_task_endpoint(task_id: str):
         raise HTTPException(status_code=400,
                             detail=f"Planner needs input: {plan.required_inputs}")
 
-    # Step 3: PLANNING → VALIDATING
+    # Step 3: Validate complete plan before executing any step.
+    for planned_step in plan.steps:
+        if not planned_step.action or "." not in planned_step.action:
+            await transition_task(task_id, "plan_invalid", TaskStatus.FAILED,
+                                  {"error": "Invalid action in plan"})
+            raise HTTPException(status_code=400, detail="Invalid action in plan")
+        if not isinstance(planned_step.params, dict):
+            await transition_task(task_id, "plan_invalid", TaskStatus.FAILED,
+                                  {"error": "Step parameters must be an object"})
+            raise HTTPException(status_code=400, detail="Step parameters must be an object")
+
+    # Step 4: PLANNING → VALIDATING
     await transition_task(task_id, "plan_validated", TaskStatus.VALIDATING,
                           {"plan": [s.action for s in plan.steps], "params": [s.params for s in plan.steps]})
 
-    # Step 4: policy check
+    # Step 5: policy check
     for step in plan.steps:
         if risk_requires_approval(step.risk_level):
             await transition_task(task_id, "approval_required", TaskStatus.WAITING_APPROVAL)
@@ -441,8 +452,9 @@ async def run_task_endpoint(task_id: str):
             )
 
         try:
-            # Step 6b: QUEUED → RUNNING
-            await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
+            # Step 6b: QUEUED → RUNNING once; later steps remain RUNNING.
+            if step_idx == 0:
+                await transition_task(task_id, "start_execution", TaskStatus.RUNNING)
 
             # Step 7: Resolve connector from registry
             cls = get_connector_class(connector_id)
