@@ -264,9 +264,11 @@ class SolidWorks2022Connector(BaseConnector):
 
     def execute(self, action: str, parameters: dict, *, timeout_s: int) -> ToolResult:
         if action == "sw.get_document_info":
-            return ToolResult(success=True, data=self.inspect_active_document("document_info"))
+            result = self.inspect_active_document("document_info")
+            return ToolResult(success=result.get("available", False), data=result, error=result.get("error"))
         if action == "sw.list_features":
-            return ToolResult(success=True, data=self.inspect_active_document("features"))
+            result = self.inspect_active_document("features")
+            return ToolResult(success=result.get("available", False), data=result, error=result.get("error"))
         if action == "sw.inspect_feature":
             return self._inspect_feature(parameters)
         if action == "sw.export_copy":

@@ -205,6 +205,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 6 — SOLIDWORKS 2022 connector
 
+**Status:** Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime capability remains UNKNOWN where no installed/version-tested SOLIDWORKS evidence exists.
+
 **Goal:** Read-only inspection + one safe write operation.
 
 ### Deliverables
