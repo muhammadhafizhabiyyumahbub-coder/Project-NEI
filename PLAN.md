@@ -184,7 +184,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 5 — Engineering core (deterministic)
 
-**Status:** Core calculator, unit parsing, formula lifecycle, reference-case verification, deterministic calculation traces, hull section preview, loading stability indicators, GZ proxy, and evidence-linked reports implemented. Full production approval still depends on evidence-backed formula records and reviewed reference cases.
+**Status:** Core calculator, unit parsing, formula lifecycle, reference-case verification, deterministic calculation traces, hull section preview, loading stability indicators, GZ proxy, and evidence-linked reports implemented. Independent reference cases now cover every built-in deterministic formula in `nei/engineering/reference_cases.py`. Full production approval still depends on evidence-backed formula records and reviewed authoritative cases.
 
 **Goal:** Unit-safe, reproducible engineering calculations.
 
