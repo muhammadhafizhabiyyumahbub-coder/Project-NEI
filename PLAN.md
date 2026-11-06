@@ -263,7 +263,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 ### Deliverables
 - Artifact handoff protocol (unit + coordinate mapping)
 - Import/export validation between software
-- Provenance manifest across software
+- Provenance manifest across software, with chain metadata validation before persistence
 - Human approval for design-changing steps
 
 ### Acceptance criteria

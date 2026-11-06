@@ -60,6 +60,14 @@ def test_validate_handoff_chain_requires_one_unit_and_hash():
         validate_handoff_chain([])
 
 
+def test_write_provenance_manifest_rejects_invalid_chain(tmp_path):
+    import pytest
+    first = HandoffHop("rhino6", "6.18", "export", "x.step", "abc", "STEP", "m")
+    second = HandoffHop("maxsurf20", "20", "import", "y.msd", "def", "MSD", "mm")
+    with pytest.raises(ValueError, match="mixed units"):
+        write_provenance_manifest(str(tmp_path), "p1", "task1", [first, second])
+
+
 def test_write_provenance_manifest(tmp_path):
     project_root = str(tmp_path)
     project_id = "p1"

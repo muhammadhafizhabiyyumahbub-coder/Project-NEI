@@ -164,6 +164,7 @@ def write_provenance_manifest(
     chain: list[HandoffHop],
 ) -> ProvenanceManifest:
     """Persist the full handoff chain as a JSON manifest file."""
+    validate_handoff_chain(chain)
     manifest = ProvenanceManifest(task_id=task_id, project_id=project_id, chain=chain)
     target = handoff_dir(project_root, project_id) / f"{task_id}_provenance.json"
     if not validate_sandbox_path(str(target), str(Path(project_root) / project_id)):
