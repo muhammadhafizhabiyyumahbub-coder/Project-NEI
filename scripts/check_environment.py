@@ -50,17 +50,19 @@ def command_output(command: list[str]) -> str | None:
 def software_record(name: str, candidates: list[str], registry_keys: list[str]) -> dict[str, object]:
     executable = find_executable(candidates)
     registry_hits = []
+    version = None
     for key in registry_keys:
         for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
             if registry_value(root, key, "InstallLocation") or registry_value(root, key, "Path"):
                 registry_hits.append(key)
+                version = version or registry_value(root, key, "Version")
                 break
     return {
         "name": name,
         "detected": executable is not None,
         "executable": executable,
         "registry_keys": registry_hits,
-        "version": "UNVERIFIED",
+        "version": version or "UNVERIFIED",
         "license_status": "UNVERIFIED",
     }
 
@@ -104,15 +106,31 @@ def probe_solidworks_com() -> str:
     return "NOT_AVAILABLE"
 
 
+def probe_maxsurf_com() -> str:
+    """Check if Maxsurf COM automation server can be instantiated."""
+    try:
+        import win32com.client
+        for clsid in ("McNaModeler.Application", "McNaStability.Application", "Maxsurf.Modeler"):
+            try:
+                obj = win32com.client.Dispatch(clsid)
+                if obj:
+                    return "AVAILABLE"
+            except Exception:
+                continue
+    except ImportError:
+        return "PYWIN32_NOT_INSTALLED"
+    return "NOT_AVAILABLE"
+
+
 def probe_maxsurf_formats() -> str:
     """Check supported file formats via registry/installed programs."""
     try:
         import winreg
         formats = []
-        for reg_key in (r"SOFTWARE\Bentley\Maxsurf", r"SOFTWARE\WOW6432Node\Bentley\Maxsurf"):
+        for reg_key in (r"SOFTWARE\Bentley\Maxsurf 20", r"SOFTWARE\WOW6432Node\Bentley\Maxsurf 20"):
             try:
                 with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_key) as key:
-                    val, _ = winreg.QueryValueEx(key, "InstallPath")
+                    val, _ = winreg.QueryValueEx(key, "Path")
                     if val:
                         # Maxsurf typically supports .surf, .stl, .iges, .step
                         formats = [".surf", ".stl", ".iges", ".step", ".sat"]
@@ -126,7 +144,36 @@ def probe_maxsurf_formats() -> str:
         return "UNVERIFIED"
 
 
+def exe_version(path: str) -> str | None:
+    try:
+        out = command_output(
+            ["powershell", "-NoProfile", "-Command",
+             f"(Get-Item -LiteralPath '{path}').VersionInfo.ProductVersion"]
+        )
+        return out or None
+    except Exception:
+        return None
+
+
 def collect() -> dict[str, object]:
+    sw_record = software_record(
+        "SOLIDWORKS 2022",
+        [r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe", r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\SLDWORKS.exe", "SLDWORKS.exe"],
+        [r"SOFTWARE\SolidWorks\Applications\IM"],
+    )
+    if sw_record["executable"]:
+        sw_record["version"] = exe_version(sw_record["executable"]) or "UNVERIFIED"
+
+    ms_record = software_record(
+        "Maxsurf 20 V8i",
+        [r"C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\MaxsurfModeler64.exe",
+         r"C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\MaxsurfStability64.exe",
+         "MaxsurfModeler64.exe", "MaxsurfStability64.exe"],
+        [r"SOFTWARE\Bentley\Maxsurf 20"],
+    )
+    if ms_record["executable"]:
+        ms_record["version"] = exe_version(ms_record["executable"]) or "UNVERIFIED"
+
     return {
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "python": {"version": platform.python_version(), "executable": sys.executable},
@@ -143,20 +190,13 @@ def collect() -> dict[str, object]:
                 [r"D:\Rhino 6\System\Rhino.exe", "Rhino.exe"],
                 [r"SOFTWARE\McNeel\Rhinoceros\6.0\Install", r"SOFTWARE\WOW6432Node\McNeel\Rhinoceros\6.0\Install"],
             ),
-            "solidworks2022": software_record(
-                "SOLIDWORKS 2022",
-                [r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe", r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\SLDWORKS.exe", "SLDWORKS.exe"],
-                [r"SOFTWARE\SolidWorks\Applications\IM"] ,
-            ),
-            "maxsurf20_v8i": software_record(
-                "Maxsurf 20 V8i",
-                ["Maxsurf.exe", "MaxsurfModeler.exe"],
-                [r"SOFTWARE\Bentley\Maxsurf"],
-            ),
+            "solidworks2022": sw_record,
+            "maxsurf20_v8i": ms_record,
             "ansys": {"detected": False, "status": "DEFERRED"},
         },
         "probes": {
             "solidworks_com": probe_solidworks_com(),
+            "maxsurf_com": probe_maxsurf_com(),
             "maxsurf_formats": probe_maxsurf_formats(),
             "rhino_transport": "RhinoPython manual box test passed; CLI remains UNVERIFIED",
         },
