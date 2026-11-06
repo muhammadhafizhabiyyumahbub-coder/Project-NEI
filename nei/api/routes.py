@@ -265,6 +265,7 @@ async def task_verification_summary(task_id: str):
         "stability_status": "not_verified",
         "fairness_status": "not_verified",
         "engineering_approval": approval["status"] if approval else "not_performed",
+        "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
         "overall_status": "approved" if approval and approval["status"] == "approved" else "not_ready",
     }
 

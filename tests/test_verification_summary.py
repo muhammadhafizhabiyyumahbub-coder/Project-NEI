@@ -17,6 +17,7 @@ def test_verification_summary_is_conservative():
     assert data['overall_status'] == 'not_ready'
     assert data['hydrostatics_status'] == 'not_verified'
     assert data['engineering_approval'] == 'not_performed'
+    assert data['approval_artifact_sha256'] is None
 
 
 def test_summary_marks_approval_stale_when_artifact_missing():
