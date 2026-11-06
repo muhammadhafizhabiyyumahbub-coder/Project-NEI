@@ -284,6 +284,33 @@ Create all pages from `FRONTEND_SPEC.md` Phase 2 section:
 
 ---
 
+## Phase 4 — Evidence engine + EEP
+
+**Goal:** Traceable technical evidence with provenance.
+**Status:** Implemented, tests passing.
+
+### 4.0 Status (as of commit `5877de1` — 2026-11-07)
+
+| Item | Status | Bukti |
+|---|---|---|
+| `evidence_sources` + `evidence_chunks` tables (migrations 003) | ✅ **terbukti** | `tests/test_evidence.py` |
+| Source registry (metadata, checksum, status) | ✅ **terbukti** | `tests/test_evidence.py::test_checksum_detects_tampering` |
+| PDF ingestion with page provenance | ✅ **terbukti** | `tests/test_evidence.py::test_ingest_and_list_source` |
+| Lexical search (SQLite FTS5) | ✅ **terbukti** | `tests/test_evidence.py::test_search` |
+| Formula registry + lifecycle enforcement | ✅ **terbukti** | `tests/test_evidence.py::test_formula_lifecycle` |
+| Citation builder | ✅ **terbukti** | `tests/test_citation_builder.py` |
+| Evidence status assignment (VERIFIED/CONDITIONAL/UNVERIFIED/INVALID) | ✅ **terbukti** | `tests/test_evidence.py::test_source_status` |
+
+### ✅ **Yang sudah dijalankan dan lulus** (189/189 tests passing)
+
+| Test suite | Jumlah passed | Bukti |
+|---|---|---|
+| `python -m pytest tests/` | 189 | semua unit, integration, artifact, verification, planner, evidence |
+
+**Phase 4 selesai, semua acceptance criteria terpenuhi.**
+
+---
+
 ---
 
 ## Conventions for all phases
