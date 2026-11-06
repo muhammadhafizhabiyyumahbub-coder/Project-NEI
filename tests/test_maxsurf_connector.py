@@ -21,7 +21,7 @@ def test_get_capabilities():
     assert caps["maxsurf.inspect_project_file"] == "SUPPORTED"
     assert caps["maxsurf.import_copy"] == "SUPPORTED"
     assert caps["maxsurf.export_copy"] == "SUPPORTED"
-    assert caps["maxsurf.hull_generation"] == "UNKNOWN"
+    assert caps["maxsurf.hull_generation"] == "SUPPORTED"
 
 
 def test_inspect_project_file():
