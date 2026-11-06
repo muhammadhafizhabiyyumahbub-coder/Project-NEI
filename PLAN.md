@@ -278,7 +278,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 9 — Advanced engineering domains
 
-**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, dependency-free PDF preview export (`nei/engineering/pdf_report.py`), and explicit non-approval limitations are implemented. Production/classification outputs remain blocked by solver validation, approved formula evidence, and independent reference cases.
+**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, dependency-free PDF preview export (`nei/engineering/pdf_report.py`), and explicit non-approval limitations are implemented. An independent arithmetic reference case now locks proxy GZ point and trapezoidal-area behavior. Production/classification outputs remain blocked by solver validation, approved formula evidence, and authoritative independent reference cases.
 
 **Goal:** Extend evidence + calculation to more naval architecture / marine engineering domains.
 
@@ -293,6 +293,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ### Acceptance criteria
 - Each new method has a source, reference case, and test
+- GZ proxy has independent arithmetic reference coverage; it remains UNVERIFIED and non-production
 - No unreviewed formula in production
 
 ### Depends on
