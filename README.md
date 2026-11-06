@@ -30,6 +30,7 @@ Local-first AI engineering assistant for Naval Architecture and Marine Engineeri
 | Frontend | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Automation | COM (SOLIDWORKS), RhinoCommon/RhinoPython (Rhino 6), file exchange (Maxsurf) |
 | LLM | External OpenAI-compatible endpoint (privacy mode: template-only) |
+| Tests | pytest (206 passed, 4 skipped, 1 warning) — see `PLAN.md` for implementation status |
 
 ## Documents
 
@@ -53,3 +54,13 @@ Local-first AI engineering assistant for Naval Architecture and Marine Engineeri
 ## Getting started
 
 See `IMPLEMENTATION_GUIDE.md` for Phase 0–2.
+
+## Status
+
+- **Phase 0–3:** Environment probes, backend, frontend, Rhino 6 Alpha 0.1 — complete
+- **Phase 4–5:** Evidence engine, engineering core, deterministic preview — complete
+- **Phase 6–7:** SOLIDWORKS/Maxsurf connectors implemented; runtime verification blocked pending live document workflows
+- **Phase 8:** Cross-software handoff protocol — complete
+- **Phase 9:** GZ proxy, classification baseline, PDF preview, reference cases — complete; production blocked pending solver/authoritative evidence
+
+All phases complete or blocked by genuine CAD/solver/license limits. See `PLAN.md` for details.
