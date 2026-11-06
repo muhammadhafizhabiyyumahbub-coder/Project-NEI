@@ -76,6 +76,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
     sections = generate_sections(request.loa, request.beam, request.draft)
     geometry_volume = section_volume(sections, request.draft)
     volume_delta = geometry_volume - volume
+    volume_delta_ratio = abs(volume_delta) / volume if volume else 0.0
+    volume_consistency = "passed" if volume_delta_ratio <= 0.05 else "failed"
     key = request.vessel_type.lower().replace(" ", "_")
     profile_warnings = validate_hull_against_profile(request.model_dump(), key)
     
@@ -89,6 +91,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "displacement_volume_m3": round(volume, 6),
             "section_geometry_volume_m3": round(geometry_volume, 6),
             "section_volume_delta_m3": round(volume_delta, 6),
+            "section_volume_delta_ratio": round(volume_delta_ratio, 6),
+            "volume_consistency": volume_consistency,
             "waterplane_area_m2": round(waterplane_area, 6),
             "center_of_buoyancy_z_m": round(kb, 6),
             "metacentric_height_m": round(gm, 6) if gm is not None else None,

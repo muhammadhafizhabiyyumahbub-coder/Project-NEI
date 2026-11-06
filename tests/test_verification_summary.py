@@ -15,6 +15,7 @@ def test_verification_summary_is_conservative():
     assert response.status_code == 200
     data = response.json()
     assert data['overall_status'] == 'not_ready'
+    assert data['volume_consistency'] == 'not_verified'
     assert data['hydrostatics_status'] == 'not_verified'
     assert data['engineering_approval'] == 'not_performed'
     assert data['approval_artifact_sha256'] is None

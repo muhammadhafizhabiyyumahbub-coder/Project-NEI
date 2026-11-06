@@ -289,6 +289,7 @@ async def task_verification_summary(task_id: str):
         "verification_status": verification.get("status") if verification else "not_verified",
         "reopen_verified": any((e.get("metadata") or {}).get("reopen_verified") is True for e in await _task_evidence_rows(task_id)),
         "hydrostatics_status": _hydrostatics_status(checks),
+        "volume_consistency": await _task_volume_consistency(task),
         "stability_status": stability_metrics["status"] if stability_metrics["status"] in {"stable", "unstable", "neutral"} else _stability_status(checks),
         "metacentric_height_m": stability_metrics["gm"],
         "loading_conditions": stability_metrics["loading_conditions"],
@@ -300,6 +301,25 @@ async def task_verification_summary(task_id: str):
         "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
         "overall_status": "approved" if approval and approval["status"] == "approved" and stability_metrics["loading_status"] != "failed" and stability_metrics["mass_status"] != "failed" else "not_ready",
     }
+
+
+async def _task_volume_consistency(task: dict) -> str:
+    """Read volume consistency from latest calculation without upgrading approval."""
+    raw_ids = task.get("calc_run_ids")
+    if not raw_ids:
+        return "not_verified"
+    try:
+        run_ids = json.loads(raw_ids)
+    except (TypeError, json.JSONDecodeError):
+        return "not_verified"
+    if not run_ids:
+        return "not_verified"
+    async with get_db() as db:
+        rows = await db.execute_fetchall("SELECT result_json FROM calculation_runs WHERE id = ?", (run_ids[-1],))
+    if not rows or not rows[0][0]:
+        return "not_verified"
+    calculations = json.loads(rows[0][0]).get("calculations", {})
+    return calculations.get("volume_consistency", "not_verified")
 
 
 async def _task_stability_metrics(task: dict) -> dict:
