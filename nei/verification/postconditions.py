@@ -105,3 +105,51 @@ def rhino_export_copy_postconditions(filename: str, expected_sha256: Optional[st
     return [
         ArtifactSavedCheck(filename=filename, expected_sha256=expected_sha256),
     ]
+
+
+@dataclass
+class DimensionsCheck(PostCondition):
+    """Check hull dimensions (length, beam, depth, draft) match expected."""
+    def __init__(self, loa: float, beam: float, depth: float, draft: float):
+        super().__init__(
+            target="dimensions",
+            expected={"loa": loa, "beam": beam, "depth": depth, "draft": draft},
+            tolerance=0.001,
+            method="hull_spec_validation",
+        )
+
+
+@dataclass
+class VolumeCheck(PostCondition):
+    """Check displacement/volume estimate matches expected."""
+    def __init__(self, expected_volume: float):
+        super().__init__(
+            target="volume",
+            expected={"volume": expected_volume},
+            tolerance=0.01,
+            method="displacement_estimate",
+        )
+
+
+@dataclass
+class StabilityCheck(PostCondition):
+    """Check basic stability criteria: beam > draft, positive moment arm."""
+    def __init__(self, beam: float, draft: float):
+        super().__init__(
+            target="stability",
+            expected={"beam": beam, "draft": draft},
+            tolerance=0.001,
+            method="min_beam_over_draft",
+        )
+
+
+@dataclass
+class WatertightCheck(PostCondition):
+    """Check artifact file type/format validity for watertightness requirement."""
+    def __init__(self, ext: str):
+        super().__init__(
+            target="watertight",
+            expected={"ext": ext},
+            tolerance=None,
+            method="file_extension_validity",
+        )

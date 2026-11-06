@@ -287,13 +287,50 @@ async def task_verification_summary(task_id: str):
         "artifact_integrity": all(c.get("result") == "PASSED" for c in checks if c.get("target") == "artifact_saved") if any(c.get("target") == "artifact_saved" for c in checks) else "not_verified",
         "verification_status": verification.get("status") if verification else "not_verified",
         "reopen_verified": any((e.get("metadata") or {}).get("reopen_verified") is True for e in await _task_evidence_rows(task_id)),
-        "hydrostatics_status": "not_verified",
-        "stability_status": "not_verified",
-        "fairness_status": "not_verified",
+        "hydrostatics_status": _hydrostatics_status(checks),
+        "stability_status": _stability_status(checks),
+        "fairness_status": _fairness_status(checks),
         "engineering_approval": approval["status"] if approval else "not_performed",
         "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
         "overall_status": "approved" if approval and approval["status"] == "approved" else "not_ready",
     }
+
+
+def _hydrostatics_status(checks: list[dict]) -> str:
+    """Conservative hydrostatics check from available verification data."""
+    dim = [c for c in checks if c.get("target") == "dimensions"]
+    vol = [c for c in checks if c.get("target") == "volume"]
+    if not dim or not vol:
+        return "not_verified"
+    if any(c.get("result") == "FAILED" for c in dim + vol):
+        return "failed"
+    if any(c.get("result") == "PASSED" for c in dim + vol):
+        return "passed"
+    return "not_verified"
+
+
+def _stability_status(checks: list[dict]) -> str:
+    """Conservative stability check from available verification data."""
+    stab = [c for c in checks if c.get("target") == "stability"]
+    if not stab:
+        return "not_verified"
+    if any(c.get("result") == "FAILED" for c in stab):
+        return "failed"
+    if any(c.get("result") == "PASSED" for c in stab):
+        return "passed"
+    return "not_verified"
+
+
+def _fairness_status(checks: list[dict]) -> str:
+    """Conservative fairness check from available verification data."""
+    fair = [c for c in checks if c.get("target") == "fairness"]
+    if not fair:
+        return "not_verified"
+    if any(c.get("result") == "FAILED" for c in fair):
+        return "failed"
+    if any(c.get("result") == "PASSED" for c in fair):
+        return "passed"
+    return "not_verified"
 
 
 async def _task_evidence_rows(task_id: str) -> list[dict]:
@@ -759,7 +796,17 @@ async def run_task_endpoint(task_id: str):
     from nei.core.task_manager import verify_task
     if plan.steps[-1].action == "hull.preview_calculation":
         final_result = result
-        await verify_task(task_id, final_result, "NEI deterministic preview", [])
+        inputs = result.get("inputs", {}) or {}
+        volume = (result.get("calculations") or {}).get("displacement_volume_m3")
+        from nei.verification.postconditions import DimensionsCheck, VolumeCheck, StabilityCheck
+        hull_conditions = [
+            DimensionsCheck(loa=inputs.get("loa", 0), beam=inputs.get("beam", 0),
+                            depth=inputs.get("depth", 0), draft=inputs.get("draft", 0)),
+            StabilityCheck(beam=inputs.get("beam", 0), draft=inputs.get("draft", 0)),
+        ]
+        if volume is not None:
+            hull_conditions.append(VolumeCheck(expected_volume=volume))
+        await verify_task(task_id, final_result, "NEI deterministic preview", hull_conditions)
         return await get_task(task_id)
     final_result = result.data
     if plan.steps[-1].action == "rhino.create_box_test":

@@ -72,3 +72,21 @@ def test_hull_task_cannot_run_twice():
     }).json()
     assert client.post(f"/api/v1/tasks/{task['id']}/run").status_code == 200
     assert client.post(f"/api/v1/tasks/{task['id']}/run").status_code == 400
+
+
+def test_hull_preview_verification_summary():
+    reset_db()
+    client = TestClient(app)
+    project = client.post("/api/v1/projects", json={"name": "Hull Summary"}).json()
+    task = client.post(f"/api/v1/projects/{project['id']}/tasks", json={
+        "user_request": "preview", "task_type": "hull_design",
+        "hull_design": {"vessel_type": "tugboat", "loa": 30, "beam": 8,
+                        "depth": 5, "draft": 2.5, "speed": 12},
+    }).json()
+    assert client.post(f"/api/v1/tasks/{task['id']}/run").status_code == 200
+    summary = client.get(f"/api/v1/tasks/{task['id']}/verification-summary").json()
+    assert summary["verification_status"] == "PASSED"
+    assert summary["hydrostatics_status"] == "passed"
+    assert summary["stability_status"] == "passed"
+    assert summary["fairness_status"] == "not_verified"
+    assert summary["overall_status"] == "not_ready"

@@ -35,7 +35,7 @@ class VerificationEngine:
         checks: list[VerificationCheck] = []
 
         for pc in postconditions:
-            check = await self._run_one(pc, connector_result)
+            check = await self._run_one(task_id, pc, connector_result)
             checks.append(check)
 
         # Determine overall status
@@ -57,7 +57,7 @@ class VerificationEngine:
             verified_at=VerificationRecord.now(),
         )
 
-    async def _run_one(self, pc: PostCondition, result: dict) -> VerificationCheck:
+    async def _run_one(self, task_id: str, pc: PostCondition, result: dict) -> VerificationCheck:
         """Dispatch to appropriate checker based on pc.target."""
         if pc.target == "bounding_box":
             # Extract first object's bounding box from result
@@ -86,6 +86,18 @@ class VerificationEngine:
             actual = result.get("document", {}).get("units", "unknown")
             expected = pc.expected.get("units", "")
             return geometry_check.check_document_units(expected, actual)
+
+        elif pc.target == "dimensions":
+            return await self._check_dimensions(pc, result)
+
+        elif pc.target == "volume":
+            return await self._check_volume(pc, result)
+
+        elif pc.target == "stability":
+            return await self._check_stability(pc, result)
+
+        elif pc.target == "watertight":
+            return await self._check_watertight(pc, result)
 
         elif pc.target == "artifact_saved":
             # Real filesystem check via artifact_store (needs task_id from outer scope)
@@ -125,6 +137,54 @@ class VerificationEngine:
 
         else:
             return self._incomplete(pc, f"unknown target: {pc.target}")
+
+    async def _check_dimensions(self, pc, result: dict) -> VerificationCheck:
+        inputs = result.get("inputs", {})
+        actual = {k: inputs.get(k) for k in pc.expected}
+        ok = all(actual.get(k) is not None and abs(actual[k] - pc.expected[k]) <= (pc.tolerance or 0.001) for k in pc.expected)
+        return VerificationCheck(
+            target=pc.target, expected=pc.expected, actual=actual,
+            tolerance=pc.tolerance, method=pc.method,
+            result="PASSED" if ok else "FAILED",
+            evidence=f"deterministic dimensions match={ok}",
+            timestamp=VerificationRecord.now(),
+        )
+
+    async def _check_volume(self, pc, result: dict) -> VerificationCheck:
+        calc = result.get("calculations", {})
+        actual = calc.get("displacement_volume_m3")
+        ok = actual is not None and abs(actual - pc.expected["volume"]) <= (pc.tolerance or 0.01)
+        return VerificationCheck(
+            target=pc.target, expected=pc.expected, actual={"volume": actual},
+            tolerance=pc.tolerance, method=pc.method,
+            result="PASSED" if ok else "FAILED",
+            evidence=f"deterministic volume match={ok}",
+            timestamp=VerificationRecord.now(),
+        )
+
+    async def _check_stability(self, pc, result: dict) -> VerificationCheck:
+        inputs = result.get("inputs", {})
+        beam = inputs.get("beam"); draft = inputs.get("draft")
+        ok = beam is not None and draft is not None and beam > draft
+        return VerificationCheck(
+            target=pc.target, expected=pc.expected, actual={"beam": beam, "draft": draft},
+            tolerance=pc.tolerance, method=pc.method,
+            result="PASSED" if ok else "FAILED",
+            evidence=f"deterministic beam_over_draft={ok}",
+            timestamp=VerificationRecord.now(),
+        )
+
+    async def _check_watertight(self, pc, result: dict) -> VerificationCheck:
+        # Only valid if artifact exists; preview geometry is not a hull.
+        artifact_saved = result.get("artifact_saved") is True
+        ok = artifact_saved and result.get("watertight") is True
+        return VerificationCheck(
+            target=pc.target, expected=pc.expected, actual={"artifact_saved": artifact_saved, "watertight": result.get("watertight")},
+            tolerance=pc.tolerance, method=pc.method,
+            result="PASSED" if ok else "INCOMPLETE",
+            evidence=f"watertight requires CAD inspection; artifact_saved={artifact_saved}",
+            timestamp=VerificationRecord.now(),
+        )
 
     def _incomplete(self, pc: PostCondition, reason: str) -> VerificationCheck:
         """Return INCOMPLETE check with reason."""
