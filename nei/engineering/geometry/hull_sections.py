@@ -35,3 +35,17 @@ def section_volume(sections: list[HullSection], draft: float) -> float:
         (sections[i + 1].station - sections[i].station) * (areas[i] + areas[i + 1]) / 2.0
         for i in range(len(sections) - 1)
     )
+
+
+def validate_sections(sections: list[HullSection], loa: float, beam: float, draft: float) -> dict:
+    """Validate section bounds before any downstream geometry use."""
+    stations = [s.station for s in sections]
+    valid = (
+        len(sections) >= 3
+        and all(a < b for a, b in zip(stations, stations[1:]))
+        and stations[0] == 0
+        and stations[-1] == round(loa, 6)
+        and all(0 <= s.half_breadth <= beam / 2 for s in sections)
+        and all(s.height == draft for s in sections)
+    )
+    return {"status": "passed" if valid else "failed", "section_count": len(sections)}
