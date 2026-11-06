@@ -54,6 +54,8 @@ def test_ingest_and_list_source(tmp_path):
     r = client.get(f"/api/v1/evidence/sources/{src['id']}")
     assert r.status_code == 200
     assert r.json()["title"] == "Buoyancy Fundamentals"
+    assert "local_file_path" not in r.json()
+    assert r.json()["filename"] == "buoyancy.txt"
 
 
 def test_source_checksum(tmp_path):

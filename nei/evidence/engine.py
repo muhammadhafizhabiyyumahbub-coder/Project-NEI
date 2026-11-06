@@ -184,7 +184,7 @@ async def list_sources() -> list[dict]:
             "SELECT id, title, source_type, authority_level, local_file_path, checksum_sha256, ingested_at, verification_status FROM evidence_sources ORDER BY ingested_at DESC")
     return [
         {"id": r[0], "title": r[1], "source_type": r[2], "authority_level": r[3],
-         "local_file_path": r[4], "checksum_sha256": r[5], "ingested_at": r[6],
+         "filename": Path(r[4]).name, "checksum_sha256": r[5], "ingested_at": r[6],
          "verification_status": r[7]}
         for r in rows
     ]
@@ -201,7 +201,10 @@ async def get_source(source_id: str) -> Optional[dict]:
     cols = ["id", "title", "author", "publisher", "source_type", "authority_level",
             "edition", "year", "doi", "official_url", "local_file_path",
             "checksum_sha256", "ingested_at", "verification_status", "notes"]
-    return dict(zip(cols, r))
+    result = dict(zip(cols, r))
+    result["filename"] = Path(result["local_file_path"]).name
+    result.pop("local_file_path", None)
+    return result
 
 
 async def verify_source_checksum(source_id: str) -> dict:
