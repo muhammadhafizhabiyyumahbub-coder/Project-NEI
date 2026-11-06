@@ -72,6 +72,60 @@ def physical_memory_bytes() -> int | str:
     return "UNVERIFIED"
 
 
+def gpu_name() -> str:
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            lines = [ln.strip() for ln in result.stdout.strip().split("\n") if ln.strip()]
+            return lines[0] if lines else "UNVERIFIED"
+        return "UNVERIFIED"
+    except Exception:
+        return "UNVERIFIED"
+
+
+def probe_solidworks_com() -> str:
+    """Check if SOLIDWORKS COM server can be instantiated."""
+    try:
+        import win32com.client
+        try:
+            sw = win32com.client.Dispatch("SldWorks.Application")
+            if sw:
+                return "AVAILABLE"
+        except Exception:
+            pass
+    except ImportError:
+        return "PYWIN32_NOT_INSTALLED"
+    except Exception:
+        pass
+    return "NOT_AVAILABLE"
+
+
+def probe_maxsurf_formats() -> str:
+    """Check supported file formats via registry/installed programs."""
+    try:
+        import winreg
+        formats = []
+        for reg_key in (r"SOFTWARE\Bentley\Maxsurf", r"SOFTWARE\WOW6432Node\Bentley\Maxsurf"):
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_key) as key:
+                    val, _ = winreg.QueryValueEx(key, "InstallPath")
+                    if val:
+                        # Maxsurf typically supports .surf, .stl, .iges, .step
+                        formats = [".surf", ".stl", ".iges", ".step", ".sat"]
+                        break
+            except FileNotFoundError:
+                continue
+        if formats:
+            return ",".join(formats)
+        return "UNKNOWN"
+    except Exception:
+        return "UNVERIFIED"
+
+
 def collect() -> dict[str, object]:
     return {
         "collected_at": datetime.now(timezone.utc).isoformat(),
@@ -81,7 +135,7 @@ def collect() -> dict[str, object]:
             "cpu": platform.processor() or "UNVERIFIED",
             "logical_cpus": os.cpu_count() or "UNVERIFIED",
             "ram_bytes": physical_memory_bytes(),
-            "gpu": "UNVERIFIED",
+            "gpu": gpu_name(),
         },
         "software": {
             "rhino6": software_record(
@@ -91,7 +145,7 @@ def collect() -> dict[str, object]:
             ),
             "solidworks2022": software_record(
                 "SOLIDWORKS 2022",
-                [r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\SLDWORKS.exe", "SLDWORKS.exe"],
+                [r"D:\SolidWork\SW\SOLIDWORKS\SLDWORKS.exe", r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\SLDWORKS.exe", "SLDWORKS.exe"],
                 [r"SOFTWARE\SolidWorks\Applications\IM"] ,
             ),
             "maxsurf20_v8i": software_record(
@@ -102,8 +156,8 @@ def collect() -> dict[str, object]:
             "ansys": {"detected": False, "status": "DEFERRED"},
         },
         "probes": {
-            "solidworks_com": "UNVERIFIED",
-            "maxsurf_formats": "UNVERIFIED",
+            "solidworks_com": probe_solidworks_com(),
+            "maxsurf_formats": probe_maxsurf_formats(),
             "rhino_transport": "RhinoPython manual box test passed; CLI remains UNVERIFIED",
         },
     }

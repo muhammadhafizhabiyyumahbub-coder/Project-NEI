@@ -493,7 +493,8 @@ class Rhino6Connector(BaseConnector):
         if not result.get("success"):
             return ToolResult(success=False, object_ids=result.get("object_ids", []), data=result, error=result.get("error"))
         artifact = Path(artifact_path)
-        for _ in range(25):
+        # Rhino writes the .3dm after reporting script completion; allow save to finish.
+        for _ in range(150):
             if artifact.exists() and artifact.stat().st_size > 0:
                 break
             time.sleep(0.2)
