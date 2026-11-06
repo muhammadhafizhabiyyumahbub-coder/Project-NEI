@@ -137,7 +137,7 @@ export function TaskDetail() {
           </div>
           <div>
             <h3 className="font-medium mb-2">Task Evidence</h3>
-             {summary && <div className="mb-2 text-xs text-gray-500">Readiness: {summary.overall_status} · Verification: {summary.verification_status} · Hydrostatics: {summary.hydrostatics_status} · Stability: {summary.stability_status}{summary.approval_artifact_sha256 ? ` · Approval SHA-256: ${summary.approval_artifact_sha256.slice(0, 12)}…` : ""}</div>}
+             {summary && <div className="mb-2 text-xs text-gray-500">Readiness: {summary.overall_status} · Verification: {summary.verification_status} · Hydrostatics: {summary.hydrostatics_status} · Stability: {summary.stability_status} · Loading: {summary.loading_status} · Mass: {summary.mass_status} · Longitudinal: {summary.longitudinal_status}{summary.approval_artifact_sha256 ? ` · Approval SHA-256: ${summary.approval_artifact_sha256.slice(0, 12)}…` : ""}</div>}
              {approvals.length > 0 && <div className="mb-2 text-xs text-gray-500">Engineering approval: {approvals[0].status}{approvals[0].reason ? ` — ${approvals[0].reason}` : ""}</div>}
              {artifacts.length > 0 && <div className="mb-2 text-xs text-gray-500">Artifacts: {artifacts.map((a) => (
     <span key={a.filename}>
