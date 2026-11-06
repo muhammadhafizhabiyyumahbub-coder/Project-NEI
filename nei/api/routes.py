@@ -206,6 +206,13 @@ async def create_engineering_approval(task_id: str, body: models.EngineeringAppr
     async with get_db() as db:
         if not await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,)):
             raise HTTPException(status_code=404, detail="Task not found")
+        if body.status == "approved":
+            artifact = await db.execute_fetchall(
+                "SELECT 1 FROM connector_evidence WHERE json_extract(metadata_json, '$.task_id') = ? AND artifact_sha256 = ? LIMIT 1",
+                (task_id, body.artifact_sha256),
+            )
+            if not artifact:
+                raise HTTPException(status_code=400, detail="artifact_sha256 does not match task evidence")
         approval_id = str(uuid.uuid4())
         now = _now()
         await db.execute(
