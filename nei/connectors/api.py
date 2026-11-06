@@ -111,8 +111,16 @@ async def connector_capabilities(connector_id: str):
     elif connector_id == "maxsurf20":
         kwargs["exe_path"] = settings.maxsurf_exe_path
     conn = cls(**kwargs)
-    return {"connector_id": connector_id,
-            "capabilities": [_capability_dict(c) for c in conn.get_capabilities()]}
+    capabilities = [_capability_dict(c) for c in conn.get_capabilities()]
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            """SELECT capability_name, COUNT(*), MAX(verified_at)
+               FROM connector_evidence WHERE connector_id = ?
+               GROUP BY capability_name""", (connector_id,))
+    evidence = {r[0]: {"count": r[1], "last_verified_at": r[2]} for r in rows}
+    for item in capabilities:
+        item["evidence"] = evidence.get(item["name"], {"count": 0, "last_verified_at": None})
+    return {"connector_id": connector_id, "capabilities": capabilities}
 
 
 @router.get("/connectors/{connector_id}/inspect")

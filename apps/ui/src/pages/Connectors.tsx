@@ -44,7 +44,8 @@ function CapabilitySummary({ connectorId }: { connectorId: string }) {
   });
   if (isLoading) return <span className="text-xs text-gray-500">Loading capabilities...</span>;
   const unknown = data?.capabilities.filter((c) => c.status === "UNKNOWN").length ?? 0;
-  return <span className="text-xs text-gray-500">{unknown} unknown</span>;
+  const verified = data?.capabilities.filter((c) => (c.evidence?.count ?? 0) > 0).length ?? 0;
+  return <span className="text-xs text-gray-500">{unknown} unknown · {verified} evidence-backed</span>;
 }
 
 function ConnectorEvidence({ connectorId }: { connectorId: string }) {

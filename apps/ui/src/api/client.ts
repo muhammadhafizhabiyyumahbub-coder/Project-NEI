@@ -68,6 +68,7 @@ export type ConnectorCapability = {
   status: "SUPPORTED" | "UNSUPPORTED" | "UNKNOWN" | "UNAVAILABLE";
   version_tested: string | null;
   notes: string | null;
+  evidence?: { count: number; last_verified_at: string | null };
 };
 
 export type ProbeResult = {
