@@ -207,7 +207,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 6 — SOLIDWORKS 2022 connector
 
-**Status:** Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime capability remains UNKNOWN where no installed/version-tested SOLIDWORKS evidence exists.
+**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime document-level operations remain UNKNOWN until a live SOLIDWORKS document is inspected.
 
 **Goal:** Read-only inspection + one safe write operation.
 
@@ -231,6 +231,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 7 — Maxsurf 20 V8i connector
 
+**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based and unverified. Detect/version, read-only `.msd` inspection, sandbox import/export, and generated-artifact verification are implemented with reproducible tests.
+
 **Goal:** File-exchange or API-driven Maxsurf integration.
 
 ### Deliverables
@@ -252,7 +254,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 8 — Cross-software workflow
 
-**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, bounding-box transfer checks, and failure-safe path validation are implemented. End-to-end CAD-to-CAD transfer remains blocked until both SOLIDWORKS and Maxsurf runtime workflows are installed and version-tested.
+**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, bounding-box transfer checks, and failure-safe path validation are implemented. SOLIDWORKS COM is available locally, but document-level inspection has not been version-tested against a live SOLIDWORKS document, so end-to-end CAD-to-CAD transfer remains blocked until runtime workflows are demonstrated.
 
 **Goal:** Controlled artifact handoff between two or more software packages.
 
