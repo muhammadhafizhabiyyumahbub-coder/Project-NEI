@@ -9,7 +9,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 0 — Audit, environment, and risk spikes
 
-**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. `scripts/measure_resource_budget.py` records current process working sets and enforces one-heavy-CAD-app-at-a-time policy for the 8GB host. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
+**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. `scripts/measure_resource_budget.py` records current process working sets and enforces one-heavy-CAD-app-at-a-time policy for the 8GB host. `data/license_policy.json` documents license/automation policy as UNVERIFIED without accessing credentials or claiming permission. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
 
 **Goal:** Resolve all UNVERIFIED items before writing integration code.
 
