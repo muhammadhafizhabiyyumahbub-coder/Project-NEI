@@ -293,6 +293,7 @@ async def task_verification_summary(task_id: str):
         "metacentric_height_m": stability_metrics["gm"],
         "loading_conditions": stability_metrics["loading_conditions"],
         "loading_status": stability_metrics["loading_status"],
+        "mass_status": stability_metrics["mass_status"],
         "fairness_status": _fairness_status(checks, await _task_evidence_rows(task_id)),
         "watertight_status": _watertight_status(checks, await _task_evidence_rows(task_id)),
         "engineering_approval": approval["status"] if approval else "not_performed",
@@ -305,17 +306,17 @@ async def _task_stability_metrics(task: dict) -> dict:
     """Read explicit stability result from latest deterministic calculation."""
     raw_ids = task.get("calc_run_ids")
     if not raw_ids:
-        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified"}
+        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified", "mass_status": "not_verified"}
     try:
         run_ids = json.loads(raw_ids)
     except (TypeError, json.JSONDecodeError):
-        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified"}
+        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified", "mass_status": "not_verified"}
     if not run_ids:
-        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified"}
+        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified", "mass_status": "not_verified"}
     async with get_db() as db:
         rows = await db.execute_fetchall("SELECT result_json FROM calculation_runs WHERE id = ?", (run_ids[-1],))
     if not rows or not rows[0][0]:
-        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified"}
+        return {"status": None, "gm": None, "loading_conditions": [], "loading_status": "not_verified", "mass_status": "not_verified"}
     result = json.loads(rows[0][0])
     calculations = result.get("calculations", {})
     loading = calculations.get("loading_conditions", [])
@@ -324,6 +325,7 @@ async def _task_stability_metrics(task: dict) -> dict:
         "gm": calculations.get("metacentric_height_m"),
         "loading_conditions": loading,
         "loading_status": "failed" if any(c.get("status") == "unstable" for c in loading) else "passed" if loading and all(c.get("status") == "stable" for c in loading) else "not_verified",
+        "mass_status": "failed" if any(c.get("mass_status") == "failed" for c in loading) else "passed" if loading and all(c.get("mass_status") == "passed" for c in loading) else "not_verified",
     }
 
 

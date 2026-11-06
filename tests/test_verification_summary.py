@@ -22,6 +22,7 @@ def test_verification_summary_is_conservative():
     assert data['watertight_status'] == 'not_verified'
     assert data['loading_conditions'] == []
     assert data['loading_status'] == 'not_verified'
+    assert data['mass_status'] == 'not_verified'
 
 
 def test_summary_marks_approval_stale_when_artifact_missing():
