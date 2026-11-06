@@ -31,10 +31,15 @@ def test_hull_preview_calculates_displacement_and_froude():
     grouped = hull_preview(HullDesignRequest(
         vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12,
         loading_conditions=[{"id": "cargo", "km": 2.5, "weight_groups": [
-            {"mass_kg": 1000, "kg_m": 1.0}, {"mass_kg": 1000, "kg_m": 3.0}
+            {"mass_kg": 1000, "kg_m": 1.0, "lcg_m": 10.0},
+            {"mass_kg": 1000, "kg_m": 3.0, "lcg_m": 20.0},
         ]}],
     ))
     assert grouped["calculations"]["loading_conditions"][0]["status"] == "stable"
+    trimmed = grouped["calculations"]["loading_conditions"][0]
+    assert trimmed["lcg_m"] == 15.0
+    assert trimmed["trim_arm_m"] == round(trimmed["lcg_m"] - trimmed["lcb_m"], 6)
+    assert trimmed["longitudinal_status"] in {"passed", "failed"}
     # With explicit Cb=0.65 (original test case)
     result2 = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, block_coefficient=0.65))
     assert result2["calculations"]["displacement_volume_m3"] == 468.0
