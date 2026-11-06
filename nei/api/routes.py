@@ -237,6 +237,24 @@ async def task_verification_summary(task_id: str):
     verification = json.loads(task["verification_json"]) if task.get("verification_json") else None
     approvals = await get_engineering_approval(task_id)
     approval = approvals[0] if approvals else None
+    if approval and approval["status"] == "approved":
+        matching_artifact = False
+        async with get_db() as db:
+            rows = await db.execute_fetchall(
+                "SELECT artifact_path, artifact_sha256, metadata_json FROM connector_evidence WHERE json_extract(metadata_json, '$.task_id') = ? AND artifact_sha256 = ?",
+                (task_id, approval["artifact_sha256"]),
+            )
+        for artifact_path, artifact_sha, metadata_json in rows:
+            filename = Path(artifact_path).name if artifact_path else None
+            if filename:
+                from nei.core import artifact_store
+                matching_artifact = await artifact_store.verify_artifact(task_id, filename, artifact_sha)
+            else:
+                matching_artifact = True
+            if matching_artifact:
+                break
+        if not matching_artifact:
+            approval = {**approval, "status": "stale"}
     checks = verification.get("checks", []) if verification else []
     return {
         "task_id": task_id,
