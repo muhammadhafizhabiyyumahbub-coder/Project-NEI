@@ -3,6 +3,7 @@ from pathlib import Path
 from nei.engineering.handoff import (
     HandoffHop, save_handoff_file, validate_transfer,
     write_provenance_manifest, handoff_dir, ProvenanceManifest,
+    validate_handoff_chain,
 )
 
 
@@ -47,6 +48,16 @@ def test_validate_transfer_fails_beyond_tolerance():
         tolerance=0.005,
     )
     assert result["passed"] is False
+
+
+def test_validate_handoff_chain_requires_one_unit_and_hash():
+    valid = HandoffHop("rhino6", "6.18", "export", "x.step", "abc", "STEP", "m")
+    assert validate_handoff_chain([valid])["hop_count"] == 1
+    import pytest
+    with pytest.raises(ValueError, match="mixed units"):
+        validate_handoff_chain([valid, HandoffHop("maxsurf20", "20", "import", "y.msd", "def", "MSD", "mm")])
+    with pytest.raises(ValueError, match="at least one"):
+        validate_handoff_chain([])
 
 
 def test_write_provenance_manifest(tmp_path):

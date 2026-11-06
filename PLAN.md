@@ -256,7 +256,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 8 — Cross-software workflow
 
-**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, bounding-box transfer checks, and failure-safe path validation are implemented. SOLIDWORKS COM is available locally, but document-level inspection has not been version-tested against a live SOLIDWORKS document, so end-to-end CAD-to-CAD transfer remains blocked until runtime workflows are demonstrated.
+**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, handoff-chain metadata validation, bounding-box transfer checks, and failure-safe path validation are implemented. SOLIDWORKS COM is available locally, but document-level inspection has not been version-tested against a live SOLIDWORKS document, so end-to-end CAD-to-CAD transfer remains blocked until runtime workflows are demonstrated.
 
 **Goal:** Controlled artifact handoff between two or more software packages.
 

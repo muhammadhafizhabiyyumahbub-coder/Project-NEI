@@ -140,6 +140,23 @@ def validate_transfer(
     }
 
 
+def validate_handoff_chain(chain: list[HandoffHop]) -> dict:
+    """Validate ordered handoff metadata before downstream transfer."""
+    if not chain:
+        raise ValueError("Handoff chain must contain at least one hop")
+    units = {hop.unit for hop in chain}
+    if len(units) != 1:
+        raise ValueError("Handoff chain contains mixed units")
+    if any(not hop.file_sha256 or not hop.file_format for hop in chain):
+        raise ValueError("Every handoff hop needs file hash and format")
+    return {
+        "valid": True,
+        "hop_count": len(chain),
+        "unit": chain[0].unit,
+        "software": [hop.software for hop in chain],
+    }
+
+
 def write_provenance_manifest(
     project_root: str,
     project_id: str,
