@@ -191,6 +191,42 @@ async def task_events_raw(task_id: str):
     } for r in rows]
 
 
+@router.post("/tasks/{task_id}/approval")
+async def create_engineering_approval(task_id: str, body: models.EngineeringApprovalRequest):
+    """Record explicit engineering review; never inferred from automated checks."""
+    if body.status not in {"not_performed", "pending", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Invalid approval status")
+    async with get_db() as db:
+        if not await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,)):
+            raise HTTPException(status_code=404, detail="Task not found")
+        approval_id = str(uuid.uuid4())
+        now = _now()
+        await db.execute(
+            """INSERT INTO engineering_approvals
+               (id, task_id, artifact_sha256, status, reviewed_by, reason, created_at, reviewed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (approval_id, task_id, body.artifact_sha256, body.status,
+             body.reviewed_by, body.reason, now, now if body.status in {"approved", "rejected"} else None),
+        )
+        await db.commit()
+    return {"id": approval_id, "task_id": task_id, "artifact_sha256": body.artifact_sha256,
+            "status": body.status, "reviewed_by": body.reviewed_by, "reason": body.reason,
+            "created_at": now, "reviewed_at": now if body.status in {"approved", "rejected"} else None}
+
+
+@router.get("/tasks/{task_id}/approval")
+async def get_engineering_approval(task_id: str):
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            "SELECT id, task_id, artifact_sha256, status, reviewed_by, reason, created_at, reviewed_at FROM engineering_approvals WHERE task_id = ? ORDER BY created_at DESC",
+            (task_id,),
+        )
+        if not rows and not await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,)):
+            raise HTTPException(status_code=404, detail="Task not found")
+    return [{"id": r[0], "task_id": r[1], "artifact_sha256": r[2], "status": r[3],
+             "reviewed_by": r[4], "reason": r[5], "created_at": r[6], "reviewed_at": r[7]} for r in rows]
+
+
 @router.post("/tasks/{task_id}/cancel", response_model=models.Task)
 async def cancel_task_endpoint(task_id: str):
     cancelled = await cancel_task(task_id)

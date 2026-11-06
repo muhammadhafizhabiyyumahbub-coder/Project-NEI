@@ -252,6 +252,16 @@ export async function getTaskArtifacts(taskId: string): Promise<TaskArtifact[]> 
   return http(`/tasks/${taskId}/artifacts`);
 }
 
+export type EngineeringApproval = { id: string; task_id: string; artifact_sha256: string | null; status: string; reviewed_by: string | null; reason: string; created_at: string; reviewed_at: string | null };
+
+export async function getTaskApproval(taskId: string): Promise<EngineeringApproval[]> {
+  return http(`/tasks/${taskId}/approval`);
+}
+
+export async function createTaskApproval(taskId: string, body: { status: string; reviewed_by?: string; reason?: string; artifact_sha256?: string }): Promise<EngineeringApproval> {
+  return http(`/tasks/${taskId}/approval`, { method: "POST", body: JSON.stringify(body) });
+}
+
 // ── connectors ──────────────────────────────────────────────────────────────
 export async function listConnectors(): Promise<Connector[]> {
   return http("/connectors");

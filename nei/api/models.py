@@ -38,6 +38,13 @@ class Task(TaskCreate):
     completed_at: Optional[datetime] = None
 
 
+class EngineeringApprovalRequest(BaseModel):
+    status: str = "pending"
+    reviewed_by: Optional[str] = None
+    reason: str = ""
+    artifact_sha256: Optional[str] = None
+
+
 class VerifyRequest(BaseModel):
     """Payload for POST /tasks/{id}/verify."""
     connector_result: dict[str, Any]
