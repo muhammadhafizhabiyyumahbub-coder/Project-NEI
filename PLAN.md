@@ -158,6 +158,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 4 — Evidence engine + EEP
 
+**Status:** Source ingestion with sandbox validation, SHA-256 provenance, PDF/text extraction, page-aware chunks, SQLite FTS5 search, formula lifecycle enforcement, citations, and UNVERIFIED status handling are implemented and covered by tests. Production evidence remains dependent on permitted authoritative source documents.
+
 **Goal:** Traceable technical evidence with provenance.
 
 ### Deliverables
@@ -182,7 +184,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 5 — Engineering core (deterministic)
 
-**Status:** Core calculator, unit parsing, formula lifecycle, reference-case verification, and deterministic calculation traces implemented. Full production approval still depends on evidence-backed formula records and reviewed reference cases.
+**Status:** Core calculator, unit parsing, formula lifecycle, reference-case verification, deterministic calculation traces, hull section preview, loading stability indicators, GZ proxy, and evidence-linked reports implemented. Full production approval still depends on evidence-backed formula records and reviewed reference cases.
 
 **Goal:** Unit-safe, reproducible engineering calculations.
 
