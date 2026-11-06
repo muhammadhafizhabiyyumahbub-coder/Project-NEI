@@ -119,7 +119,7 @@ def hull_preview(request: HullDesignRequest) -> dict:
         "sections": section_manifest(sections),
         "section_validation": section_validation,
         "warnings": list(set(warnings)),
-        "assumptions": ["Section geometry is deterministic preview only", f"Block coefficient Cb={request.block_coefficient}"],
+        "assumptions": ["Section geometry is deterministic preview only", "Trim arm is LCG minus LCB; trim angle and MCT are not calculated", f"Block coefficient Cb={request.block_coefficient}"],
         "connector_status": "NOT_GENERATED",
     }
 
