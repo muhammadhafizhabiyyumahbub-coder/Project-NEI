@@ -231,7 +231,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 7 — Maxsurf 20 V8i connector
 
-**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based and unverified. Detect/version, read-only `.msd` inspection, sandbox import/export, and generated-artifact verification are implemented with reproducible tests.
+**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based and unverified. Detect/version, read-only `.msd` inspection, sandbox import/export, and generated-artifact verification are implemented with reproducible tests. Operator evidence in `docs/maxsurf_engineering_verification_report.md` confirms sandbox generation and manual reopen; NEI-driven input exchange remains UNKNOWN.
 
 **Goal:** File-exchange or API-driven Maxsurf integration.
 
