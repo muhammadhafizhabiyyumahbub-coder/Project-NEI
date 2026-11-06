@@ -9,6 +9,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 0 — Audit, environment, and risk spikes
 
+**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
+
 **Goal:** Resolve all UNVERIFIED items before writing integration code.
 
 ### Deliverables
