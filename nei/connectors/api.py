@@ -64,9 +64,20 @@ async def list_capabilities():
         for item in cls(**kwargs).get_capabilities():
             capabilities.append({"connector_id": connector["id"], **_capability_dict(item)})
     capabilities.extend([
-        {"connector_id": "rhino6", "name": "rhino.hull_generation", "status": "UNKNOWN", "version_tested": None, "notes": "No validated hull-generation artifact test."},
+        {"connector_id": "rhino6", "name": "rhino.hull_generation", "status": "UNKNOWN", "version_tested": None, "notes": "No validated production hull-generation artifact test."},
         {"connector_id": "solidworks2022", "name": "solidworks.hull_generation", "status": "UNSUPPORTED", "version_tested": None, "notes": "Connector supports inspection/safe operations only."},
     ])
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            """SELECT connector_id, capability_name, COUNT(*), MAX(verified_at)
+               FROM connector_evidence GROUP BY connector_id, capability_name"""
+        )
+    evidence = {(r[0], r[1]): {"count": r[2], "last_verified_at": r[3]} for r in rows}
+    for item in capabilities:
+        item["evidence"] = evidence.get(
+            (item.get("connector_id"), item["name"]),
+            {"count": 0, "last_verified_at": None},
+        )
     return {"capabilities": capabilities}
 
 
