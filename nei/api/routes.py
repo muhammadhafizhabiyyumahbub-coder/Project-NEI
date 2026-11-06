@@ -347,7 +347,7 @@ async def _task_stability_metrics(task: dict) -> dict:
         "loading_conditions": loading,
         "loading_status": "failed" if any(c.get("status") == "unstable" for c in loading) else "passed" if loading and all(c.get("status") == "stable" for c in loading) else "not_verified",
         "mass_status": "failed" if any(c.get("mass_status") == "failed" for c in loading) else "passed" if loading and all(c.get("mass_status") == "passed" for c in loading) else "not_verified",
-        "longitudinal_status": "failed" if any(c.get("longitudinal_status") == "failed" for c in loading) else "passed" if loading and all(c.get("longitudinal_status") in {"passed", "not_verified"} for c in loading) else "not_verified",
+        "longitudinal_status": "failed" if any(c.get("longitudinal_status") == "failed" for c in loading) else "passed" if loading and all(c.get("longitudinal_status") == "passed" for c in loading) else "not_verified",
     }
 
 
