@@ -286,6 +286,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 - GZ curve analysis + UNVERIFIED classification criteria baseline (implemented in `nei/engineering/gz.py`; proxy only, no hydrostatic solver, no approval path)
 - Advanced hydrostatics / stability / resistance / propulsion methods (only as evidence + tests mature)
 - Report export (PDF with full provenance)
+- Hull preview now includes GZ curve and classification baseline (implemented in `nei/engineering/hull.py`)
 
 ### Acceptance criteria
 - Each new method has a source, reference case, and test
