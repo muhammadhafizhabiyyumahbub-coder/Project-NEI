@@ -272,6 +272,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 9 — Advanced engineering domains
 
+**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, evidence-linked JSON artifacts, and explicit non-approval limitations are implemented. Production PDF/classification outputs remain blocked by solver validation, approved formula evidence, and independent reference cases.
+
 **Goal:** Extend evidence + calculation to more naval architecture / marine engineering domains.
 
 ### Deliverables

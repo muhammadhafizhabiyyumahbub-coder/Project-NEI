@@ -8,7 +8,7 @@ def build_hull_report(*, task_id: str, hull: dict, preview: dict, verification: 
     """Build auditable JSON report; preview remains explicitly non-approval."""
     report = {
         "report_type": "hull_engineering_preview",
-        "report_version": "1.0",
+        "report_version": "1.1",
         "task_id": task_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "inputs": hull,
@@ -18,7 +18,7 @@ def build_hull_report(*, task_id: str, hull: dict, preview: dict, verification: 
         "status": "NOT_FOR_APPROVAL",
         "limitations": [
             "Deterministic preview, not CAD-derived geometry",
-            "No hydrostatic solver or loading-condition stability analysis",
+            "No hydrostatic solver, trim-angle, MCT, or classification stability analysis",
             "No classification compliance determination",
         ],
     }
