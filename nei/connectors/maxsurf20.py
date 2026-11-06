@@ -56,6 +56,8 @@ class Maxsurf20Connector(BaseConnector):
             return self._import_copy(parameters)
         if action == "maxsurf.export_copy":
             return self._export_copy(parameters)
+        if action == "maxsurf.verify_generated_hull":
+            return self._verify_generated_hull(parameters)
         raise ValueError(f"Unknown action: {action}")
 
     def _inspect_project_file(self, parameters: dict) -> ToolResult:
@@ -136,6 +138,35 @@ class Maxsurf20Connector(BaseConnector):
             success=True,
             object_ids=[str(dest)],
             data={"source": source, "export_path": str(dest)},
+        )
+
+    def _verify_generated_hull(self, parameters: dict) -> ToolResult:
+        """Verify generated artifact is readable and distinct, without modifying it."""
+        source = Path(parameters.get("source", ""))
+        output = Path(parameters.get("output", ""))
+        if not source.exists() or not output.exists():
+            return ToolResult(success=False, error="source or output file not found")
+        source_bytes = source.read_bytes()
+        output_bytes = output.read_bytes()
+        source_sha = hashlib.sha256(source_bytes).hexdigest()
+        output_sha = hashlib.sha256(output_bytes).hexdigest()
+        return ToolResult(
+            success=bool(output_bytes) and source_sha != output_sha,
+            object_ids=[str(output)],
+            data={
+                "source": str(source),
+                "output": str(output),
+                "source_sha256": source_sha,
+                "output_sha256": output_sha,
+                "source_size_bytes": len(source_bytes),
+                "output_size_bytes": len(output_bytes),
+                "source_unchanged_check": hashlib.sha256(source.read_bytes()).hexdigest() == source_sha,
+                "output_differs_from_source": source_sha != output_sha,
+                "read_only": True,
+                "reopen_verified": False,
+                "engineering_approval": "not_performed",
+            },
+            error=None if output_bytes else "output file is empty",
         )
 
     def inspect(self, target: dict) -> InspectionResult:

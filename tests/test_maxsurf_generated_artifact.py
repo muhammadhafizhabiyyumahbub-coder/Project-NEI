@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from nei.core.database import DB_PATH, init_db
 from nei.connectors.evidence import record_connector_evidence
+from nei.connectors.maxsurf20 import Maxsurf20Connector
 
 
 def test_generated_hull_evidence_has_source_output_checksums(tmp_path):
@@ -28,3 +29,21 @@ def test_generated_hull_evidence_has_source_output_checksums(tmp_path):
     assert evidence_id
     assert source.read_bytes() == b"source hull"
     assert output_sha != source_sha
+
+
+def test_verify_generated_hull_is_read_only(tmp_path):
+    source = tmp_path / "source.msd"
+    output = tmp_path / "generated-hull.msd"
+    source.write_bytes(b"source hull")
+    output.write_bytes(b"generated hull")
+    before = output.read_bytes()
+    result = Maxsurf20Connector().execute(
+        "maxsurf.verify_generated_hull",
+        {"source": str(source), "output": str(output)},
+        timeout_s=5,
+    )
+    assert result.success
+    assert result.data["output_differs_from_source"] is True
+    assert result.data["read_only"] is True
+    assert output.read_bytes() == before
+    assert result.data["engineering_approval"] == "not_performed"
