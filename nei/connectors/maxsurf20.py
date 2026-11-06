@@ -129,8 +129,9 @@ class Maxsurf20Connector(BaseConnector):
         out_dir = Path(project_root) / "artifacts"
         out_dir.mkdir(parents=True, exist_ok=True)
         from datetime import datetime, timezone
+        import uuid
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        dest = out_dir / f"{ts}_{Path(source).name}"
+        dest = out_dir / f"{ts}_{uuid.uuid4().hex[:8]}_{Path(source).name}"
         if not validate_sandbox_path(str(dest), project_root):
             return ToolResult(success=False, error="Export target outside project sandbox")
         shutil.copy2(source, dest)
