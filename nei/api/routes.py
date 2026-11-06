@@ -782,6 +782,15 @@ async def run_task_endpoint(task_id: str):
                     "sha256": report_sha,
                     "status": report["status"],
                 }
+                from nei.engineering.pdf_report import build_pdf
+                pdf_sha = await artifact_store.save_artifact(
+                    task_id, "hull_engineering_report.pdf", build_pdf(report)
+                )
+                result["report_pdf_artifact"] = {
+                    "filename": "hull_engineering_report.pdf",
+                    "sha256": pdf_sha,
+                    "status": report["status"],
+                }
                 run_id = await record_hull_run(task_id, hull, result)
                 async with get_db() as db:
                     await db.execute("UPDATE tasks SET calc_run_ids = ? WHERE id = ?", (_json.dumps([run_id]), task_id))

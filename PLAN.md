@@ -276,7 +276,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 9 — Advanced engineering domains
 
-**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, and explicit non-approval limitations are implemented. Production PDF/classification outputs remain blocked by solver validation, approved formula evidence, and independent reference cases.
+**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, dependency-free PDF preview export (`nei/engineering/pdf_report.py`), and explicit non-approval limitations are implemented. Production/classification outputs remain blocked by solver validation, approved formula evidence, and independent reference cases.
 
 **Goal:** Extend evidence + calculation to more naval architecture / marine engineering domains.
 
@@ -287,6 +287,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 - Advanced hydrostatics / stability / resistance / propulsion methods (only as evidence + tests mature)
 - Report export (PDF with full provenance)
 - Hull preview now includes GZ curve and classification baseline (implemented in `nei/engineering/hull.py`)
+- Hull tasks save JSON and PDF report artifacts with SHA-256 provenance
 
 ### Acceptance criteria
 - Each new method has a source, reference case, and test
