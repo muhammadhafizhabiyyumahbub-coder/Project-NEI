@@ -11,6 +11,7 @@ No LLM generates evidence. LLM may only cite existing records.
 """
 import hashlib
 import json
+import os
 import shutil
 import uuid
 from datetime import datetime, timezone
@@ -30,6 +31,22 @@ def _sha256_bytes(data: bytes) -> str:
 
 
 DOCUMENTS_ROOT = Path("data/documents")
+
+
+def _ingest_allowed_roots() -> list[Path]:
+    """Where source documents may live.
+
+    - Repo root / data/documents (production sandbox).
+    - System temp dir for local test runs (pytest tmp_path dirs are created
+      under this on Windows), so sandbox rules still hold without needing to
+      mutate the repo root.
+    """
+    import tempfile
+    roots = [Path.cwd(), DOCUMENTS_ROOT.resolve(strict=False), Path(tempfile.gettempdir())]
+    tmp_base = os.environ.get("TEMP") or os.environ.get("TMP") or ""
+    if tmp_base:
+        roots.append(Path(tmp_base).resolve())
+    return roots
 
 
 # ── Source ingestion ──────────────────────────────────────────────────────────
@@ -57,6 +74,11 @@ async def ingest_source(
     src = Path(local_file_path)
     if not src.exists():
         raise FileNotFoundError(f"Source file not found: {local_file_path}")
+
+    # Sandbox guard: only accept files under documented ingest roots
+    from nei.core.policy import validate_sandbox_path
+    if not any(validate_sandbox_path(str(src), str(root)) for root in _ingest_allowed_roots()):
+        raise PermissionError(f"Source file {local_file_path} outside permitted sandbox")
 
     file_bytes = src.read_bytes()
     checksum = _sha256_bytes(file_bytes)
