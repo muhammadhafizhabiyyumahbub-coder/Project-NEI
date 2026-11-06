@@ -94,6 +94,7 @@ async def get_source_endpoint(source_id: str):
     src = await get_source(source_id)
     if not src:
         raise HTTPException(status_code=404, detail="Source not found")
+    src.pop("local_file_path", None)
     return src
 
 

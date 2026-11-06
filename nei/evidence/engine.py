@@ -203,7 +203,6 @@ async def get_source(source_id: str) -> Optional[dict]:
             "checksum_sha256", "ingested_at", "verification_status", "notes"]
     result = dict(zip(cols, r))
     result["filename"] = Path(result["local_file_path"]).name
-    result.pop("local_file_path", None)
     return result
 
 
