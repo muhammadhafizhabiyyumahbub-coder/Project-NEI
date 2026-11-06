@@ -17,6 +17,8 @@ class HullDesignRequest(BaseModel):
     draft: float = Field(gt=0)
     speed: float = Field(ge=0)
     block_coefficient: Optional[float] = Field(default=None, gt=0, le=1)
+    kg: Optional[float] = Field(default=None, ge=0)
+    km: Optional[float] = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_geometry(self):
@@ -35,6 +37,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
     volume = request.block_coefficient * request.loa * request.beam * request.draft
     waterplane_area = request.loa * request.beam
     kb = request.draft / 2.0
+    gm = request.km - request.kg if request.km is not None and request.kg is not None else None
+    stability_status = "not_verified" if gm is None else ("stable" if gm > 0 else "unstable" if gm < 0 else "neutral")
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
     
     key = request.vessel_type.lower().replace(" ", "_")
@@ -50,6 +54,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "displacement_volume_m3": round(volume, 6),
             "waterplane_area_m2": round(waterplane_area, 6),
             "center_of_buoyancy_z_m": round(kb, 6),
+            "metacentric_height_m": round(gm, 6) if gm is not None else None,
+            "stability_status": stability_status,
             "froude_number": round(froude, 6),
         },
         "warnings": list(set(warnings)),

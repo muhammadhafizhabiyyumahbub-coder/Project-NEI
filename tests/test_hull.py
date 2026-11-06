@@ -12,6 +12,10 @@ def test_hull_preview_calculates_displacement_and_froude():
     assert result["calculations"]["froude_number"] > 0
     assert result["calculations"]["waterplane_area_m2"] == 240.0
     assert result["calculations"]["center_of_buoyancy_z_m"] == 1.5
+    assert result["calculations"]["stability_status"] == "not_verified"
+    stable = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, kg=2.0, km=2.5))
+    assert stable["calculations"]["metacentric_height_m"] == 0.5
+    assert stable["calculations"]["stability_status"] == "stable"
     # With explicit Cb=0.65 (original test case)
     result2 = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, block_coefficient=0.65))
     assert result2["calculations"]["displacement_volume_m3"] == 468.0
