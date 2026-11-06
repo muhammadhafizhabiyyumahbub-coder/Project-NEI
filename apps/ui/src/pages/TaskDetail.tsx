@@ -1,6 +1,6 @@
 import { useTask } from "../hooks/useTask";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, getTaskEvidence, getTaskArtifacts, getTaskApproval, type CalculationRun } from "../api/client";
+import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, getTaskEvidence, getTaskArtifacts, getTaskApproval, getVerificationSummary, type CalculationRun } from "../api/client";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
@@ -21,6 +21,11 @@ export function TaskDetail() {
   const { data: approvals = [] } = useQuery({
     queryKey: ["task-approval", taskId],
     queryFn: () => getTaskApproval(taskId!),
+    enabled: !!taskId,
+  });
+  const { data: summary } = useQuery({
+    queryKey: ["verification-summary", taskId],
+    queryFn: () => getVerificationSummary(taskId!),
     enabled: !!taskId,
   });
   const [lastResult, setLastResult] = useState<Record<string, unknown> | null>(null);
@@ -132,6 +137,7 @@ export function TaskDetail() {
           </div>
           <div>
             <h3 className="font-medium mb-2">Task Evidence</h3>
+             {summary && <div className="mb-2 text-xs text-gray-500">Readiness: {summary.overall_status} · Verification: {summary.verification_status} · Hydrostatics: {summary.hydrostatics_status} · Stability: {summary.stability_status}</div>}
              {approvals.length > 0 && <div className="mb-2 text-xs text-gray-500">Engineering approval: {approvals[0].status}{approvals[0].reason ? ` — ${approvals[0].reason}` : ""}</div>}
              {artifacts.length > 0 && <div className="mb-2 text-xs text-gray-500">Artifacts: {artifacts.map((a) => `${a.filename} (${a.sha256.slice(0, 12)}…)`).join(", ")}</div>}
              {evidence.length === 0 ? <p className="text-gray-500">No evidence linked.</p> : <ul className="space-y-2">{evidence.map((item) => <li key={item.id} className="text-sm p-2 border rounded"><div className="flex justify-between"><span className="font-medium">{item.capability_name}</span><span className="text-gray-500">{item.evidence_type}</span></div>{item.artifact_path && <div className="text-xs text-gray-500 break-all">{item.artifact_path}</div>}{item.artifact_sha256 && <div className="text-xs font-mono text-gray-400 break-all">SHA-256: {item.artifact_sha256}</div>}{item.notes && <div className="text-xs text-gray-500">{item.notes}</div>}</li>)}</ul>}

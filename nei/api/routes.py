@@ -196,6 +196,13 @@ async def create_engineering_approval(task_id: str, body: models.EngineeringAppr
     """Record explicit engineering review; never inferred from automated checks."""
     if body.status not in {"not_performed", "pending", "approved", "rejected"}:
         raise HTTPException(status_code=400, detail="Invalid approval status")
+    if body.status in {"approved", "rejected"}:
+        if not body.reviewed_by or not body.reviewed_by.strip():
+            raise HTTPException(status_code=400, detail="reviewed_by required for final approval status")
+        if not body.reason or not body.reason.strip():
+            raise HTTPException(status_code=400, detail="reason required for final approval status")
+    if body.status == "approved" and not body.artifact_sha256:
+        raise HTTPException(status_code=400, detail="artifact_sha256 required for approval")
     async with get_db() as db:
         if not await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,)):
             raise HTTPException(status_code=404, detail="Task not found")
@@ -212,6 +219,35 @@ async def create_engineering_approval(task_id: str, body: models.EngineeringAppr
     return {"id": approval_id, "task_id": task_id, "artifact_sha256": body.artifact_sha256,
             "status": body.status, "reviewed_by": body.reviewed_by, "reason": body.reason,
             "created_at": now, "reviewed_at": now if body.status in {"approved", "rejected"} else None}
+
+
+@router.get("/tasks/{task_id}/verification-summary")
+async def task_verification_summary(task_id: str):
+    """Return one conservative engineering-readiness summary for a task."""
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    verification = json.loads(task["verification_json"]) if task.get("verification_json") else None
+    approvals = await get_engineering_approval(task_id)
+    approval = approvals[0] if approvals else None
+    checks = verification.get("checks", []) if verification else []
+    return {
+        "task_id": task_id,
+        "artifact_integrity": all(c.get("result") == "PASSED" for c in checks if c.get("target") == "artifact_saved") if any(c.get("target") == "artifact_saved" for c in checks) else "not_verified",
+        "verification_status": verification.get("status") if verification else "not_verified",
+        "reopen_verified": any((e.get("metadata") or {}).get("reopen_verified") is True for e in await _task_evidence_rows(task_id)),
+        "hydrostatics_status": "not_verified",
+        "stability_status": "not_verified",
+        "fairness_status": "not_verified",
+        "engineering_approval": approval["status"] if approval else "not_performed",
+        "overall_status": "approved" if approval and approval["status"] == "approved" else "not_ready",
+    }
+
+
+async def _task_evidence_rows(task_id: str) -> list[dict]:
+    async with get_db() as db:
+        rows = await db.execute_fetchall("SELECT metadata_json FROM connector_evidence WHERE json_extract(metadata_json, '$.task_id') = ?", (task_id,))
+    return [{"metadata": json.loads(r[0]) if r[0] else None} for r in rows]
 
 
 @router.get("/tasks/{task_id}/approval")

@@ -262,6 +262,12 @@ export async function createTaskApproval(taskId: string, body: { status: string;
   return http(`/tasks/${taskId}/approval`, { method: "POST", body: JSON.stringify(body) });
 }
 
+export type VerificationSummary = { task_id: string; artifact_integrity: boolean | string; verification_status: string; reopen_verified: boolean; hydrostatics_status: string; stability_status: string; fairness_status: string; engineering_approval: string; overall_status: string };
+
+export async function getVerificationSummary(taskId: string): Promise<VerificationSummary> {
+  return http(`/tasks/${taskId}/verification-summary`);
+}
+
 // ── connectors ──────────────────────────────────────────────────────────────
 export async function listConnectors(): Promise<Connector[]> {
   return http("/connectors");
