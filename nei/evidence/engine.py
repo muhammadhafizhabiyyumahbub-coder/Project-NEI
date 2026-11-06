@@ -94,6 +94,30 @@ async def ingest_source(
     chunks = _extract_chunks(file_bytes, src.suffix.lower())
 
     async with get_db() as db:
+        # Idempotency: if same checksum already ingested, return existing record
+        existing = await db.execute_fetchall(
+            "SELECT id, title, source_type, authority_level, local_file_path, checksum_sha256, verification_status, ingested_at FROM evidence_sources WHERE checksum_sha256 = ?",
+            (checksum,),
+        )
+        if existing:
+            row = existing[0]
+            # Return the canonical source record; this ingestion is idempotent
+            chunk_count = await db.execute_fetchall(
+                "SELECT COUNT(*) FROM evidence_chunks WHERE source_id = ?",
+                (row[0],),
+            )
+            return {
+                "id": row[0],
+                "title": row[1],
+                "source_type": row[2],
+                "authority_level": row[3],
+                "local_file_path": row[4],
+                "checksum_sha256": row[5],
+                "verification_status": row[6],
+                "ingested_at": row[7],
+                "chunk_count": chunk_count[0][0] if chunk_count else 0,
+                "ingest_duplicated": True,
+            }
         await db.execute(
             """INSERT INTO evidence_sources
                (id, title, author, publisher, source_type, authority_level, edition,

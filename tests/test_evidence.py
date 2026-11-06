@@ -58,6 +58,37 @@ def test_ingest_and_list_source(tmp_path):
     assert r.json()["filename"] == "buoyancy.txt"
 
 
+def test_ingest_is_idempotent_on_duplicate_checksum(tmp_path):
+    """Ingesting the same file twice must return the canonical source, not duplicate."""
+    src_file = tmp_path / "dupe.txt"
+    src_file.write_text("idempotent evidence body", encoding="utf-8")
+    client = setup()
+
+    first = client.post("/api/v1/evidence/sources", json={
+        "title": "First Ingest",
+        "source_type": "other",
+        "authority_level": "other",
+        "local_file_path": str(src_file),
+    }).json()
+
+    second = client.post("/api/v1/evidence/sources", json={
+        "title": "Second Ingest",
+        "source_type": "other",
+        "authority_level": "other",
+        "local_file_path": str(src_file),
+    }).json()
+
+    # Same canonical id; audit trail declares the duplicate
+    assert second["id"] == first["id"]
+    assert second["checksum_sha256"] == first["checksum_sha256"]
+    assert second["ingest_duplicated"] is True
+
+    # No phantom source row was created
+    listed = client.get("/api/v1/evidence/sources").json()
+    assert len([s for s in listed if s["checksum_sha256"] == first["checksum_sha256"]]) == 1
+
+
+
 def test_source_checksum(tmp_path):
     src_file = tmp_path / "check.txt"
     src_file.write_text("hello world", encoding="utf-8")
