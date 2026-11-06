@@ -10,10 +10,11 @@ async def record_proven_evidence():
     print("Recording proven connector evidence...")
     
     # 1. Rhino
-    rhino_path = "data/projects/capability-probe/rhino/artifacts/20261105_173000_proxy.3dm"
-    rhino_sha = "1EE8AC7FDF3DFECF76E60C41B7968C5035192645F239DFC543BC2B5431BD4C9C"
-    if not Path(rhino_path).exists():
-        raise FileNotFoundError(f"Missing sandbox artifact: {rhino_path}")
+    rhino_candidates = sorted(Path("data/projects/capability-probe/artifacts").glob("rhino_hull_proxy*.3dm"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not rhino_candidates:
+        raise FileNotFoundError("Missing sandbox Rhino hull proxy artifact")
+    rhino_path = str(rhino_candidates[0])
+    rhino_sha = __import__("hashlib").sha256(Path(rhino_path).read_bytes()).hexdigest()
     await record_rhino_hull_proxy_evidence(
         artifact_path=rhino_path,
         artifact_sha256=rhino_sha,
