@@ -108,7 +108,7 @@ def test_box_script_is_python2_compatible():
         return fake_result
 
     with patch.object(conn, "_run_rhino_script", side_effect=fake_run):
-        conn.execute("rhino.create_box_test", {"length": 10.0, "width": 3.0, "height": 1.0}, timeout_s=5)
+        result = conn.execute("rhino.create_box_test", {"length": 10.0, "width": 3.0, "height": 1.0}, timeout_s=5)
 
     assert captured_scripts, "no script captured"
     script = captured_scripts[0]
@@ -117,6 +117,9 @@ def test_box_script_is_python2_compatible():
     assert "10.0" in script
     assert "3.0" in script
     assert "1.0" in script
+    # Assert script hash was included in result data
+    assert result.success is True
+    assert "script_sha256" in result.data
 
 
 def test_inspect_base_method():

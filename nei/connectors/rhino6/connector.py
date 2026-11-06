@@ -469,10 +469,13 @@ class Rhino6Connector(BaseConnector):
 
         success = result.get("success", False)
         if success:
+            # Add script hash to result data for audit and UI
+            result_data = dict(result)
+            result_data["script_sha256"] = script_sha
             return ToolResult(
                 success=True,
                 object_ids=result.get("object_ids", []),
-                data=result,
+                data=result_data,
             )
         return ToolResult(success=False, error=result.get("error", "unknown script error"))
 

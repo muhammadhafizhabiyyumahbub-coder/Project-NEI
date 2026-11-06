@@ -572,7 +572,8 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
         await log_event(db, task_id=task_id, event_type="EXECUTE_ACTION",
                         detail_json={"action": body.action, "params": body.params,
                                      "success": result.success,
-                                     "artifact_sha256": artifact_sha})
+                                     "artifact_sha256": artifact_sha,
+                                     "script_sha256": (result.data or {}).get("script_sha256")})
         await db.commit()
 
     return {

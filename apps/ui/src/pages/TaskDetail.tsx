@@ -128,6 +128,11 @@ export function TaskDetail() {
             {lastResult && (
               <pre className="mt-2 text-xs bg-black/30 p-2 rounded overflow-auto max-h-60">{JSON.stringify(lastResult, null, 2)}</pre>
             )}
+            {lastResult && (lastResult.data as { script_sha256?: string })?.script_sha256 && (
+              <p className="mt-2 text-xs font-mono text-gray-400">
+                Script SHA-256: {(lastResult.data as { script_sha256?: string }).script_sha256!.slice(0, 12)}…
+              </p>
+            )}
           </div>
 
           <div className="task-output-grid">
