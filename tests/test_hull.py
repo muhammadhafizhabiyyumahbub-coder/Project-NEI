@@ -16,6 +16,12 @@ def test_hull_preview_calculates_displacement_and_froude():
     stable = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, kg=2.0, km=2.5))
     assert stable["calculations"]["metacentric_height_m"] == 0.5
     assert stable["calculations"]["stability_status"] == "stable"
+    loaded = hull_preview(HullDesignRequest(
+        vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12,
+        loading_conditions=[{"id": "full_load", "kg": 2.0, "km": 2.5}, {"id": "ballast", "kg": 3.0, "km": 2.5}],
+    ))
+    assert loaded["calculations"]["loading_conditions"][0]["status"] == "stable"
+    assert loaded["calculations"]["loading_conditions"][1]["status"] == "unstable"
     # With explicit Cb=0.65 (original test case)
     result2 = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, block_coefficient=0.65))
     assert result2["calculations"]["displacement_volume_m3"] == 468.0

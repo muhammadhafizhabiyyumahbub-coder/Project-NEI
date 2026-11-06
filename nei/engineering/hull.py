@@ -19,6 +19,7 @@ class HullDesignRequest(BaseModel):
     block_coefficient: Optional[float] = Field(default=None, gt=0, le=1)
     kg: Optional[float] = Field(default=None, ge=0)
     km: Optional[float] = Field(default=None, ge=0)
+    loading_conditions: list[dict] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_geometry(self):
@@ -39,6 +40,17 @@ def hull_preview(request: HullDesignRequest) -> dict:
     kb = request.draft / 2.0
     gm = request.km - request.kg if request.km is not None and request.kg is not None else None
     stability_status = "not_verified" if gm is None else ("stable" if gm > 0 else "unstable" if gm < 0 else "neutral")
+    loading_results = []
+    for condition in request.loading_conditions:
+        condition_id = condition.get("id", f"condition_{len(loading_results) + 1}")
+        condition_kg = condition.get("kg")
+        condition_km = condition.get("km", request.km)
+        condition_gm = condition_km - condition_kg if condition_kg is not None and condition_km is not None else None
+        loading_results.append({
+            "id": condition_id,
+            "gm_m": round(condition_gm, 6) if condition_gm is not None else None,
+            "status": "not_verified" if condition_gm is None else "stable" if condition_gm > 0 else "unstable" if condition_gm < 0 else "neutral",
+        })
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
     
     key = request.vessel_type.lower().replace(" ", "_")
@@ -56,6 +68,7 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "center_of_buoyancy_z_m": round(kb, 6),
             "metacentric_height_m": round(gm, 6) if gm is not None else None,
             "stability_status": stability_status,
+            "loading_conditions": loading_results,
             "froude_number": round(froude, 6),
         },
         "warnings": list(set(warnings)),
