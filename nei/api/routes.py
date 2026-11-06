@@ -289,7 +289,8 @@ async def task_verification_summary(task_id: str):
         "reopen_verified": any((e.get("metadata") or {}).get("reopen_verified") is True for e in await _task_evidence_rows(task_id)),
         "hydrostatics_status": _hydrostatics_status(checks),
         "stability_status": _stability_status(checks),
-        "fairness_status": _fairness_status(checks),
+        "fairness_status": _fairness_status(checks, await _task_evidence_rows(task_id)),
+        "watertight_status": _watertight_status(checks, await _task_evidence_rows(task_id)),
         "engineering_approval": approval["status"] if approval else "not_performed",
         "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
         "overall_status": "approved" if approval and approval["status"] == "approved" else "not_ready",
@@ -321,15 +322,33 @@ def _stability_status(checks: list[dict]) -> str:
     return "not_verified"
 
 
-def _fairness_status(checks: list[dict]) -> str:
-    """Conservative fairness check from available verification data."""
+def _fairness_status(checks: list[dict], evidence: list[dict]) -> str:
+    """Fairness requires explicit CAD evidence, never preview geometry."""
     fair = [c for c in checks if c.get("target") == "fairness"]
     if not fair:
+        fair = [{"result": (e.get("metadata") or {}).get("fairness_status")} for e in evidence
+                if (e.get("metadata") or {}).get("fairness_status")]
+    if not fair:
         return "not_verified"
-    if any(c.get("result") == "FAILED" for c in fair):
+    if any(c.get("result") in {"FAILED", "failed"} for c in fair):
         return "failed"
-    if any(c.get("result") == "PASSED" for c in fair):
+    if any(c.get("result") in {"PASSED", "passed", "verified"} for c in fair):
         return "passed"
+    return "not_verified"
+
+
+def _watertight_status(checks: list[dict], evidence: list[dict]) -> str:
+    """Watertightness requires explicit CAD inspection evidence."""
+    water = [c for c in checks if c.get("target") == "watertight"]
+    if not water:
+        water = [{"result": (e.get("metadata") or {}).get("watertight_status")} for e in evidence
+                 if (e.get("metadata") or {}).get("watertight_status")]
+    if not water:
+        return "not_verified"
+    if any(c.get("result") in {"FAILED", "failed"} for c in water):
+        return "failed"
+    if any(c.get("result") in {"PASSED", "passed", "verified"} for c in water):
+        return "verified"
     return "not_verified"
 
 
