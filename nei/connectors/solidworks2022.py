@@ -247,12 +247,18 @@ class SolidWorks2022Connector(BaseConnector):
     def get_capabilities(self) -> list[Capability]:
         version = self.get_version()
         tested = version or None
+        com = self.com_probe()
+        com_ok = bool(com.get("available")) and bool(com.get("version"))
+        if com_ok and tested == com["version"]:
+            capability_com_note = "COM availability verified against installed version"
+        else:
+            capability_com_note = "COM availability could not be verified"
         return [
             Capability("sw.detect", CapabilityStatus.SUPPORTED, tested, "Filesystem probe; no COM"),
             Capability("sw.get_version", CapabilityStatus.SUPPORTED, tested, "Executable version resource"),
             Capability("sw.health_check", CapabilityStatus.SUPPORTED, tested, "Filesystem availability only"),
-            Capability("sw.get_document_info", CapabilityStatus.SUPPORTED, tested, "Read-only COM inspection tested on active document"),
-            Capability("sw.list_features", CapabilityStatus.SUPPORTED, tested, "Read-only COM feature listing tested on active document"),
+            Capability("sw.get_document_info", CapabilityStatus.SUPPORTED if com_ok else CapabilityStatus.UNKNOWN, tested, f"Read-only COM inspection on active document; {capability_com_note}"),
+            Capability("sw.list_features", CapabilityStatus.SUPPORTED if com_ok else CapabilityStatus.UNKNOWN, tested, f"Read-only COM feature listing on active document; {capability_com_note}"),
             Capability("sw.inspect_feature", CapabilityStatus.UNKNOWN, tested, "L0 read feature dimensions"),
             Capability("sw.export_copy", CapabilityStatus.UNKNOWN, tested, "L1 save-as copy to artifacts/; write-guarded"),
             Capability("sw.create_test_part", CapabilityStatus.UNKNOWN, tested, "L2 disposable part; user approval required"),

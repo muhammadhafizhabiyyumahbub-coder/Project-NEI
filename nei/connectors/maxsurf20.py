@@ -7,11 +7,23 @@ so connector stays read-only until file exchange is proven.
 from pathlib import Path
 from typing import Optional
 import hashlib
+import subprocess
+import winreg
 from nei.connectors.base import (
     BaseConnector, DetectionResult, HealthResult, ToolResult, InspectionResult,
     Capability, CapabilityStatus,
 )
 from nei.core.policy import validate_sandbox_path
+
+
+def _registry_version() -> Optional[str]:
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Bentley\Maxsurf 20") as key:
+            value, _ = winreg.QueryValueEx(key, "Version")
+            return str(value)
+    except (FileNotFoundError, OSError):
+        return None
+
 
 class Maxsurf20Connector(BaseConnector):
     connector_id = "maxsurf20"
@@ -28,14 +40,26 @@ class Maxsurf20Connector(BaseConnector):
             Path(r"C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\Modeler64.exe"),
         ]
 
+    def _exe_version(self, path: Path) -> Optional[str]:
+        try:
+            command = f"(Get-Item -LiteralPath '{path}').VersionInfo.ProductVersion"
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", command],
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+            return result.stdout.strip() or None
+        except (OSError, subprocess.SubprocessError):
+            return None
+
     def detect(self) -> DetectionResult:
         for p in self._candidate_paths():
             if p.exists():
+                version = self._exe_version(p) or _registry_version()
                 return DetectionResult(
                     detected=True,
                     exe_path=str(p),
-                    version="20.00.01.59",
-                    notes="Maxsurf Modeler found; COM/Automation unverified",
+                    version=version,
+                    notes=f"Maxsurf Modeler found; version {version}; COM automation not registered",
                 )
         return DetectionResult(detected=False, notes="Maxsurf executable not found")
 
