@@ -492,16 +492,15 @@ class Rhino6Connector(BaseConnector):
             return ToolResult(success=False, error="Hull proxy script did not produce result JSON")
         if not result.get("success"):
             return ToolResult(success=False, object_ids=result.get("object_ids", []), data=result, error=result.get("error"))
-        exported = self._export_copy(artifact_path, timeout_s=timeout_s)
         artifact = Path(artifact_path)
         for _ in range(25):
             if artifact.exists() and artifact.stat().st_size > 0:
                 break
             time.sleep(0.2)
         artifact_saved = artifact.exists() and artifact.stat().st_size > 0
-        result.update({"artifact_path": artifact_path, "artifact_saved": artifact_saved, "artifact": exported.data})
+        result.update({"artifact_path": artifact_path, "artifact_saved": artifact_saved, "artifact": {}})
         return ToolResult(success=artifact_saved, object_ids=result.get("object_ids", []), data=result,
-                          error=None if artifact_saved else exported.error)
+                          error=None if artifact_saved else "Hull proxy artifact was not saved")
 
     def _inspect_objects(self, object_ids: list, timeout_s: int = 15) -> ToolResult:
         """Run inspect script for given object IDs (or all objects if empty list)."""
