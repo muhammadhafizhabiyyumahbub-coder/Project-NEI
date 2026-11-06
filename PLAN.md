@@ -180,6 +180,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 5 — Engineering core (deterministic)
 
+**Status:** Core calculator, unit parsing, formula lifecycle, reference-case verification, and deterministic calculation traces implemented. Full production approval still depends on evidence-backed formula records and reviewed reference cases.
+
 **Goal:** Unit-safe, reproducible engineering calculations.
 
 ### Deliverables
