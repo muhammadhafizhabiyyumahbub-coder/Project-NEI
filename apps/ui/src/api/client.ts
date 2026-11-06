@@ -268,6 +268,10 @@ export async function getVerificationSummary(taskId: string): Promise<Verificati
   return http(`/tasks/${taskId}/verification-summary`);
 }
 
+export function artifactDownloadUrl(taskId: string, filename: string): string {
+  return `${BASE}/tasks/${taskId}/artifacts/${encodeURIComponent(filename)}`;
+}
+
 // ── connectors ──────────────────────────────────────────────────────────────
 export async function listConnectors(): Promise<Connector[]> {
   return http("/connectors");

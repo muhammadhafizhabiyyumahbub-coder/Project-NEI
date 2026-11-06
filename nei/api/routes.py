@@ -147,6 +147,32 @@ async def task_artifacts(task_id: str):
     return await list_artifacts(task_id)
 
 
+@router.get("/tasks/{task_id}/artifacts/{filename:path}")
+async def download_task_artifact(task_id: str, filename: str):
+    """Download artifact. Only task-owned files. No path traversal."""
+    async with get_db() as db:
+        if not await db.execute_fetchall("SELECT id FROM tasks WHERE id = ?", (task_id,)):
+            raise HTTPException(status_code=404, detail="Task not found")
+    # Prevent path traversal
+    if ".." in filename or filename.startswith("/") or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    from nei.core.artifact_store import get_artifact_path
+    try:
+        full_path = get_artifact_path(task_id, filename)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+        
+    if not full_path.exists() or not full_path.is_file():
+        # Check if it was a traversal attempt that got sanitized or just missing
+        if ".." in filename or filename.startswith("/"):
+            raise HTTPException(status_code=400, detail="Invalid filename")
+        raise HTTPException(status_code=404, detail="Artifact not found")
+        
+    from fastapi.responses import FileResponse
+    return FileResponse(full_path, filename=Path(filename).name)
+
+
 @router.get("/tasks/{task_id}/evidence")
 async def task_evidence(task_id: str):
     """Return connector evidence linked to task execution."""

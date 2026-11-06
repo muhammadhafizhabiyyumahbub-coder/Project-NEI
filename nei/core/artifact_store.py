@@ -116,3 +116,10 @@ async def write_manifest(task_id: str, filename: str, extra: dict | None = None)
     manifest_path = _safe_path(task_id, manifest_name)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def get_artifact_path(task_id: str, filename: str) -> Path:
+    """Return the absolute path to an artifact. Internal use only."""
+    _sanitize_name(task_id, "task_id")
+    _sanitize_name(filename, "filename")
+    return _safe_path(task_id, filename)
