@@ -274,7 +274,7 @@ export async function getEvidenceSource(id: string): Promise<EvidenceSource> {
   return http(`/evidence/sources/${id}`);
 }
 
-export async function getConnectorEvidence(connectorId: string, capability?: string): Promise<{ connector_id: string; evidence: { id: string; capability_name: string; evidence_type: string; artifact_path: string; artifact_sha256: string; metadata: any; verified_at: string; verified_by: string; notes: string }[] }> {
+export async function getConnectorEvidence(connectorId: string, capability?: string): Promise<{ connector_id: string; evidence: { id: string; capability_name: string; evidence_type: string; artifact_path: string | null; artifact_sha256: string | null; metadata: Record<string, unknown> | null; verified_at: string; verified_by: string; notes: string | null }[] }> {
   const url = capability
     ? `/connectors/${connectorId}/evidence?capability=${encodeURIComponent(capability)}`
     : `/connectors/${connectorId}/evidence`;

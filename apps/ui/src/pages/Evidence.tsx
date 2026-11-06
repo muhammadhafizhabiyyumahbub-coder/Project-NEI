@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { listEvidenceSources, searchEvidence } from "../api/client";
+import { getConnectorEvidence, listEvidenceSources, searchEvidence } from "../api/client";
 import type { EvidenceSearchResult } from "../api/client";
 
 export function Evidence() {
@@ -12,6 +12,10 @@ export function Evidence() {
   const [sourceId, setSourceId] = useState<string>("");
   const [results, setResults] = useState<EvidenceSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const { data: maxsurfEvidence } = useQuery({
+    queryKey: ["connector-evidence", "maxsurf20"],
+    queryFn: () => getConnectorEvidence("maxsurf20"),
+  });
 
   async function doSearch() {
     if (!query.trim()) return;
@@ -27,6 +31,19 @@ export function Evidence() {
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Evidence</h2>
+      <section className="mb-4 p-3 border rounded">
+        <h3 className="font-medium">Maxsurf verification</h3>
+        <p className="text-sm text-gray-500">Manual artifact generation and reopen are verified. NEI automation and engineering approval remain unverified.</p>
+        <div className="text-xs mt-2">Records: {maxsurfEvidence?.evidence?.length ?? 0}</div>
+        {maxsurfEvidence?.evidence?.filter((e) => e.capability_name.includes("hull_generation")).map((e) => (
+          <div key={e.id} className="mt-2 p-2 bg-gray-50 rounded text-xs">
+            <div className="font-medium">{e.evidence_type} · {e.verified_at}</div>
+            {e.artifact_path && <div className="break-all">{e.artifact_path}</div>}
+            {e.artifact_sha256 && <div className="font-mono break-all">SHA-256: {e.artifact_sha256}</div>}
+            {e.notes && <div>{e.notes}</div>}
+          </div>
+        ))}
+      </section>
       <div className="mb-4">
         <h3 className="font-medium mb-2">Sources</h3>
         {isLoading ? <p>Loading...</p> : error ? <p className="text-error">Error: {error.message}</p> : (
