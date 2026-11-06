@@ -99,6 +99,18 @@ def hull_preview(request: HullDesignRequest) -> dict:
     warnings = profile_warnings
     if request.speed > 40:
         warnings.append("Speed is unusually high; confirm vessel type and units.")
+
+    from nei.engineering.gz import generate_gz_curve, ClassificationBaseline
+    gz_analysis = None
+    classification_baseline = None
+    if gm is not None:
+        gz_result = generate_gz_curve(gm_0_m=gm, beam_m=request.beam, draft_m=request.draft)
+        gz_analysis = gz_result.to_dict()
+        keel_ratio = (request.kg / request.draft) if request.kg is not None and request.draft > 0 else None
+        classification_baseline = ClassificationBaseline.evaluate(
+            gm_m=gm, area_m0rad=gz_result.area_m0rad, keel_ratio=keel_ratio
+        )
+
     return {
         "status": "PREVIEW_ONLY",
         "inputs": request.model_dump(),
@@ -121,6 +133,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
         "warnings": list(set(warnings)),
         "assumptions": ["Section geometry is deterministic preview only", "Trim arm is LCG minus LCB; trim angle and MCT are not calculated", f"Block coefficient Cb={request.block_coefficient}"],
         "connector_status": "NOT_GENERATED",
+        "gz_analysis": gz_analysis,
+        "classification_baseline": classification_baseline,
     }
 
 

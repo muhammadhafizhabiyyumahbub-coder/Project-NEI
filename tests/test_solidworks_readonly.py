@@ -4,6 +4,10 @@ from nei.core.config import settings
 
 def test_solidworks_readonly_inspection():
     connector = SolidWorks2022Connector(settings.solidworks_exe_path)
+    com = connector.com_probe()
+    if not com.get("available"):
+        import pytest
+        pytest.skip("No active SOLIDWORKS COM instance; cannot verify document-level inspection")
     info = connector.inspect_active_document("document_info")
     features = connector.inspect_active_document("features")
     assert info["available"]

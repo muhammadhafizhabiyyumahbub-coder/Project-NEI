@@ -772,6 +772,8 @@ async def run_task_endpoint(task_id: str):
                     task_id=task_id,
                     hull=hull.model_dump(),
                     preview=result,
+                    gz_analysis=result.get("gz_analysis"),
+                    classification_baseline=result.get("classification_baseline"),
                 )
                 report_content = _json.dumps(report, indent=2, sort_keys=True).encode()
                 report_sha = await artifact_store.save_artifact(task_id, "hull_engineering_report.json", report_content)

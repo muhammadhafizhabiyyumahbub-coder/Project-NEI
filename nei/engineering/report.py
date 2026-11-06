@@ -4,7 +4,10 @@ import json
 from datetime import datetime, timezone
 
 
-def build_hull_report(*, task_id: str, hull: dict, preview: dict, verification: dict | None = None) -> dict:
+def build_hull_report(*, task_id: str, hull: dict, preview: dict,
+                      verification: dict | None = None,
+                      gz_analysis: dict | None = None,
+                      classification_baseline: dict | None = None) -> dict:
     """Build auditable JSON report; preview remains explicitly non-approval."""
     report = {
         "report_type": "hull_engineering_preview",
@@ -15,6 +18,8 @@ def build_hull_report(*, task_id: str, hull: dict, preview: dict, verification: 
         "calculations": preview.get("calculations", {}),
         "loading_conditions": preview.get("calculations", {}).get("loading_conditions", []),
         "verification": verification or {},
+        "gz_curve": gz_analysis or {},
+        "classification_baseline": classification_baseline or {},
         "status": "NOT_FOR_APPROVAL",
         "limitations": [
             "Deterministic preview, not CAD-derived geometry",
