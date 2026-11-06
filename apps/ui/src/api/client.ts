@@ -262,7 +262,7 @@ export async function createTaskApproval(taskId: string, body: { status: string;
   return http(`/tasks/${taskId}/approval`, { method: "POST", body: JSON.stringify(body) });
 }
 
-export type VerificationSummary = { task_id: string; artifact_integrity: boolean | string; volume_consistency: string; verification_status: string; reopen_verified: boolean; hydrostatics_status: string; stability_status: string; metacentric_height_m: number | null; loading_conditions: Array<{ id: string; gm_m: number | null; status: string }>; loading_status: string; mass_status: string; fairness_status: string; engineering_approval: string; approval_artifact_sha256: string | null; overall_status: string };
+export type VerificationSummary = { task_id: string; artifact_integrity: boolean | string; volume_consistency: string; verification_status: string; reopen_verified: boolean; hydrostatics_status: string; stability_status: string; metacentric_height_m: number | null; loading_conditions: Array<{ id: string; gm_m: number | null; status: string }>; loading_status: string; mass_status: string; longitudinal_status: string; fairness_status: string; engineering_approval: string; approval_artifact_sha256: string | null; overall_status: string };
 
 export async function getVerificationSummary(taskId: string): Promise<VerificationSummary> {
   return http(`/tasks/${taskId}/verification-summary`);
