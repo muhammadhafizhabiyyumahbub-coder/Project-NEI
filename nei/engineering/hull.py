@@ -42,36 +42,7 @@ def hull_preview(request: HullDesignRequest) -> dict:
     kb = request.draft / 2.0
     gm = request.km - request.kg if request.km is not None and request.kg is not None else None
     stability_status = "not_verified" if gm is None else ("stable" if gm > 0 else "unstable" if gm < 0 else "neutral")
-    loading_results = []
-    for condition in request.loading_conditions:
-        condition_id = condition.get("id", f"condition_{len(loading_results) + 1}")
-        condition_kg = condition.get("kg")
-        weight_groups = condition.get("weight_groups", [])
-        if weight_groups:
-            if any(float(w.get("mass_kg", 0)) <= 0 or float(w.get("kg_m", 0)) < 0 for w in weight_groups):
-                raise ValueError("Weight groups require positive mass_kg and non-negative kg_m")
-            total_weight = sum(float(w["mass_kg"]) for w in weight_groups)
-            condition_kg = sum(float(w["mass_kg"]) * float(w["kg_m"]) for w in weight_groups) / total_weight
-        condition_km = condition.get("km", request.km)
-        condition_fsm = condition.get("free_surface_moment", request.free_surface_moment or 0.0)
-        condition_density = condition.get("fluid_density", request.fluid_density)
-        displacement_mass = volume * condition_density
-        total_weight = sum(float(w.get("mass_kg", 0)) for w in weight_groups)
-        mass_status = "failed" if total_weight > displacement_mass else "passed" if weight_groups else "not_verified"
-        condition_gm = condition_km - condition_kg - condition_fsm / displacement_mass if condition_kg is not None and condition_km is not None else None
-        loading_results.append({
-            "id": condition_id,
-            "gm_m": round(condition_gm, 6) if condition_gm is not None else None,
-            "free_surface_moment": condition_fsm,
-            "fluid_density": condition_density,
-            "displacement_mass_kg": round(displacement_mass, 6),
-            "weight_groups": weight_groups,
-            "total_weight_kg": round(total_weight, 6),
-            "mass_status": mass_status,
-            "status": "failed" if mass_status == "failed" else "not_verified" if condition_gm is None else "stable" if condition_gm > 0 else "unstable" if condition_gm < 0 else "neutral",
-        })
-    froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
-    
+
     from nei.engineering.geometry.hull_sections import generate_sections, section_manifest, section_volume, validate_sections, section_lcg
     sections = generate_sections(request.loa, request.beam, request.draft)
     section_validation = validate_sections(sections, request.loa, request.beam, request.draft)
@@ -80,6 +51,48 @@ def hull_preview(request: HullDesignRequest) -> dict:
     volume_delta = geometry_volume - volume
     volume_delta_ratio = abs(volume_delta) / volume if volume else 0.0
     volume_consistency = "passed" if volume_delta_ratio <= 0.05 else "failed"
+
+    loading_results = []
+    for condition in request.loading_conditions:
+        condition_id = condition.get("id", f"condition_{len(loading_results) + 1}")
+        condition_kg = condition.get("kg")
+        condition_lcg = condition.get("lcg")
+        weight_groups = condition.get("weight_groups", [])
+        if weight_groups:
+            if any(float(w.get("mass_kg", 0)) <= 0 or float(w.get("kg_m", 0)) < 0 for w in weight_groups):
+                raise ValueError("Weight groups require positive mass_kg and non-negative kg_m")
+            if any("lcg_m" in w and float(w["lcg_m"]) < 0 for w in weight_groups):
+                raise ValueError("Weight group lcg_m must be non-negative")
+            total_weight = sum(float(w["mass_kg"]) for w in weight_groups)
+            condition_kg = sum(float(w["mass_kg"]) * float(w["kg_m"]) for w in weight_groups) / total_weight
+            if all("lcg_m" in w for w in weight_groups):
+                condition_lcg = sum(float(w["mass_kg"]) * float(w["lcg_m"]) for w in weight_groups) / total_weight
+        condition_km = condition.get("km", request.km)
+        condition_fsm = condition.get("free_surface_moment", request.free_surface_moment or 0.0)
+        condition_density = condition.get("fluid_density", request.fluid_density)
+        displacement_mass = volume * condition_density
+        total_weight = sum(float(w.get("mass_kg", 0)) for w in weight_groups)
+        mass_status = "failed" if total_weight > displacement_mass else "passed" if weight_groups else "not_verified"
+        condition_gm = condition_km - condition_kg - condition_fsm / displacement_mass if condition_kg is not None and condition_km is not None else None
+        trim_arm = condition_lcg - lcb if condition_lcg is not None else None
+        longitudinal_status = "not_verified" if trim_arm is None else "passed" if abs(trim_arm) <= 0.01 * request.loa else "failed"
+        loading_results.append({
+            "id": condition_id,
+            "gm_m": round(condition_gm, 6) if condition_gm is not None else None,
+            "free_surface_moment": condition_fsm,
+            "fluid_density": condition_density,
+            "displacement_mass_kg": round(displacement_mass, 6),
+            "weight_groups": weight_groups,
+            "total_weight_kg": round(total_weight, 6),
+            "lcg_m": round(condition_lcg, 6) if condition_lcg is not None else None,
+            "lcb_m": round(lcb, 6),
+            "trim_arm_m": round(trim_arm, 6) if trim_arm is not None else None,
+            "longitudinal_status": longitudinal_status,
+            "mass_status": mass_status,
+            "status": "failed" if mass_status == "failed" or longitudinal_status == "failed" else "not_verified" if condition_gm is None else "stable" if condition_gm > 0 else "unstable" if condition_gm < 0 else "neutral",
+        })
+    froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
+
     key = request.vessel_type.lower().replace(" ", "_")
     profile_warnings = validate_hull_against_profile(request.model_dump(), key)
     
