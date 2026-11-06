@@ -20,6 +20,8 @@ def test_verification_summary_is_conservative():
     assert data['approval_artifact_sha256'] is None
     assert data['fairness_status'] == 'not_verified'
     assert data['watertight_status'] == 'not_verified'
+    assert data['loading_conditions'] == []
+    assert data['loading_status'] == 'not_verified'
 
 
 def test_summary_marks_approval_stale_when_artifact_missing():

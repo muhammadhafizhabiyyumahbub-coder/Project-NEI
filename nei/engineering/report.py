@@ -13,6 +13,7 @@ def build_hull_report(*, task_id: str, hull: dict, preview: dict, verification: 
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "inputs": hull,
         "calculations": preview.get("calculations", {}),
+        "loading_conditions": preview.get("calculations", {}).get("loading_conditions", []),
         "verification": verification or {},
         "status": "NOT_FOR_APPROVAL",
         "limitations": [
