@@ -28,6 +28,13 @@ def test_hull_preview_calculates_displacement_and_froude():
     ))
     assert corrected["calculations"]["loading_conditions"][0]["gm_m"] < 0.5
     assert corrected["calculations"]["loading_conditions"][0]["displacement_mass_kg"] == 575640.0
+    grouped = hull_preview(HullDesignRequest(
+        vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12,
+        loading_conditions=[{"id": "cargo", "km": 2.5, "weight_groups": [
+            {"mass_kg": 1000, "kg_m": 1.0}, {"mass_kg": 1000, "kg_m": 3.0}
+        ]}],
+    ))
+    assert grouped["calculations"]["loading_conditions"][0]["status"] == "stable"
     # With explicit Cb=0.65 (original test case)
     result2 = hull_preview(HullDesignRequest(vessel_type="Tugboat", loa=30, beam=8, depth=4, draft=3, speed=12, block_coefficient=0.65))
     assert result2["calculations"]["displacement_volume_m3"] == 468.0

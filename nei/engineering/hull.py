@@ -46,6 +46,11 @@ def hull_preview(request: HullDesignRequest) -> dict:
     for condition in request.loading_conditions:
         condition_id = condition.get("id", f"condition_{len(loading_results) + 1}")
         condition_kg = condition.get("kg")
+        weight_groups = condition.get("weight_groups", [])
+        if weight_groups:
+            total_weight = sum(float(w.get("mass_kg", 0)) for w in weight_groups)
+            if total_weight > 0:
+                condition_kg = sum(float(w.get("mass_kg", 0)) * float(w.get("kg_m", 0)) for w in weight_groups) / total_weight
         condition_km = condition.get("km", request.km)
         condition_fsm = condition.get("free_surface_moment", request.free_surface_moment or 0.0)
         condition_density = condition.get("fluid_density", request.fluid_density)
@@ -57,6 +62,7 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "free_surface_moment": condition_fsm,
             "fluid_density": condition_density,
             "displacement_mass_kg": round(displacement_mass, 6),
+            "weight_groups": weight_groups,
             "status": "not_verified" if condition_gm is None else "stable" if condition_gm > 0 else "unstable" if condition_gm < 0 else "neutral",
         })
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
