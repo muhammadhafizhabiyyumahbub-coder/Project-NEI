@@ -48,9 +48,10 @@ def hull_preview(request: HullDesignRequest) -> dict:
         condition_kg = condition.get("kg")
         weight_groups = condition.get("weight_groups", [])
         if weight_groups:
-            total_weight = sum(float(w.get("mass_kg", 0)) for w in weight_groups)
-            if total_weight > 0:
-                condition_kg = sum(float(w.get("mass_kg", 0)) * float(w.get("kg_m", 0)) for w in weight_groups) / total_weight
+            if any(float(w.get("mass_kg", 0)) <= 0 or float(w.get("kg_m", 0)) < 0 for w in weight_groups):
+                raise ValueError("Weight groups require positive mass_kg and non-negative kg_m")
+            total_weight = sum(float(w["mass_kg"]) for w in weight_groups)
+            condition_kg = sum(float(w["mass_kg"]) * float(w["kg_m"]) for w in weight_groups) / total_weight
         condition_km = condition.get("km", request.km)
         condition_fsm = condition.get("free_surface_moment", request.free_surface_moment or 0.0)
         condition_density = condition.get("fluid_density", request.fluid_density)
