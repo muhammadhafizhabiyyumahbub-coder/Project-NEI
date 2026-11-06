@@ -299,7 +299,7 @@ async def task_verification_summary(task_id: str):
         "watertight_status": _watertight_status(checks, await _task_evidence_rows(task_id)),
         "engineering_approval": approval["status"] if approval else "not_performed",
         "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
-        "overall_status": "approved" if approval and approval["status"] == "approved" and stability_metrics["loading_status"] != "failed" and stability_metrics["mass_status"] != "failed" else "not_ready",
+        "overall_status": "approved" if approval and approval["status"] == "approved" and stability_metrics["loading_status"] != "failed" and stability_metrics["mass_status"] != "failed" and await _task_volume_consistency(task) != "failed" else "not_ready",
     }
 
 
