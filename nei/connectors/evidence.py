@@ -30,6 +30,13 @@ async def record_connector_evidence(
     metadata_json = json.dumps(metadata) if metadata else None
 
     async with get_db() as db:
+        existing = await db.execute_fetchall(
+            """SELECT id FROM connector_evidence
+               WHERE connector_id = ? AND capability_name = ? AND evidence_type = ? AND artifact_sha256 = ?""",
+            (connector_id, capability_name, evidence_type, artifact_sha256),
+        )
+        if existing:
+            return existing[0][0]
         await db.execute(
             """INSERT INTO connector_evidence
                (id, connector_id, capability_name, evidence_type, artifact_path,
