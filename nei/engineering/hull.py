@@ -72,6 +72,8 @@ def hull_preview(request: HullDesignRequest) -> dict:
         })
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
     
+    from nei.engineering.geometry.hull_sections import generate_sections, section_manifest
+    sections = generate_sections(request.loa, request.beam, request.draft)
     key = request.vessel_type.lower().replace(" ", "_")
     profile_warnings = validate_hull_against_profile(request.model_dump(), key)
     
@@ -90,8 +92,9 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "loading_conditions": loading_results,
             "froude_number": round(froude, 6),
         },
+        "sections": section_manifest(sections),
         "warnings": list(set(warnings)),
-        "assumptions": [f"Block coefficient Cb={request.block_coefficient}"],
+        "assumptions": ["Section geometry is deterministic preview only", f"Block coefficient Cb={request.block_coefficient}"],
         "connector_status": "NOT_GENERATED",
     }
 
