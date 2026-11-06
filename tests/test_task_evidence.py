@@ -29,3 +29,4 @@ def test_task_evidence_endpoint_returns_only_linked_records():
     response = client.get(f"/api/v1/tasks/{task['id']}/evidence")
     assert response.status_code == 200
     assert [item['id'] for item in response.json()] == ['linked']
+    assert response.json()[0]['artifact_path'] == 'box.3dm'

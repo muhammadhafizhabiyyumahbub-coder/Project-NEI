@@ -169,7 +169,7 @@ async def task_evidence(task_id: str):
             artifact_verified = await artifact_store.verify_artifact(task_id, filename, r[5]) if r[5] else None
         records.append({
             "id": r[0], "connector_id": r[1], "capability_name": r[2],
-            "evidence_type": r[3], "artifact_path": r[4], "artifact_sha256": r[5],
+            "evidence_type": r[3], "artifact_path": Path(r[4]).name if r[4] else None, "artifact_sha256": r[5],
             "metadata": metadata, "verified_at": r[7], "verified_by": r[8],
             "notes": r[9], "artifact_verified": artifact_verified,
         })
