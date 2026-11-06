@@ -20,6 +20,7 @@ class HullDesignRequest(BaseModel):
     kg: Optional[float] = Field(default=None, ge=0)
     km: Optional[float] = Field(default=None, ge=0)
     loading_conditions: list[dict] = Field(default_factory=list)
+    free_surface_moment: Optional[float] = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_geometry(self):
@@ -45,10 +46,13 @@ def hull_preview(request: HullDesignRequest) -> dict:
         condition_id = condition.get("id", f"condition_{len(loading_results) + 1}")
         condition_kg = condition.get("kg")
         condition_km = condition.get("km", request.km)
-        condition_gm = condition_km - condition_kg if condition_kg is not None and condition_km is not None else None
+        condition_fsm = condition.get("free_surface_moment", request.free_surface_moment or 0.0)
+        # Simplified correction: FSM / displacement mass. Density not inferred.
+        condition_gm = condition_km - condition_kg - condition_fsm / volume if condition_kg is not None and condition_km is not None else None
         loading_results.append({
             "id": condition_id,
             "gm_m": round(condition_gm, 6) if condition_gm is not None else None,
+            "free_surface_moment": condition_fsm,
             "status": "not_verified" if condition_gm is None else "stable" if condition_gm > 0 else "unstable" if condition_gm < 0 else "neutral",
         })
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
