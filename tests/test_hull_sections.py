@@ -1,5 +1,5 @@
 import pytest
-from nei.engineering.geometry.hull_sections import generate_sections, section_manifest
+from nei.engineering.geometry.hull_sections import generate_sections, section_manifest, section_volume
 
 
 def test_section_generator_is_symmetric_and_deterministic():
@@ -9,6 +9,7 @@ def test_section_generator_is_symmetric_and_deterministic():
     assert sections[-1].half_breadth == 0
     assert sections[5].half_breadth == 4
     assert section_manifest(sections) == section_manifest(generate_sections(30, 8, 2.5))
+    assert section_volume(sections, 2.5) > 0
 
 
 def test_section_count_must_be_odd():

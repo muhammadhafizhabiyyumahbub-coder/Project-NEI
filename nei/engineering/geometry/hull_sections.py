@@ -24,3 +24,14 @@ def generate_sections(loa: float, beam: float, draft: float, count: int = 11) ->
 
 def section_manifest(sections: list[HullSection]) -> list[dict]:
     return [asdict(section) for section in sections]
+
+
+def section_volume(sections: list[HullSection], draft: float) -> float:
+    """Estimate volume by trapezoidal integration of rectangular section areas."""
+    if len(sections) < 2:
+        return 0.0
+    areas = [2.0 * section.half_breadth * draft for section in sections]
+    return sum(
+        (sections[i + 1].station - sections[i].station) * (areas[i] + areas[i + 1]) / 2.0
+        for i in range(len(sections) - 1)
+    )
