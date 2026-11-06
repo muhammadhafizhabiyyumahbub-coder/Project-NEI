@@ -16,3 +16,5 @@ def test_capability_mapping_includes_internal_and_hull_statuses():
     assert by_name["maxsurf.hull_generation"]["status"] == "UNKNOWN"
     assert by_name["rhino.hull_generation"]["status"] == "UNKNOWN"
     assert by_name["solidworks.hull_generation"]["status"] == "UNSUPPORTED"
+    assert by_name["maxsurf.hull_generation_manual"]["status"] == "SUPPORTED"
+    assert by_name["maxsurf.hull_generation_from_nei"]["status"] == "UNKNOWN"
