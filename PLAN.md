@@ -9,13 +9,13 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 0 — Audit, environment, and risk spikes
 
-**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
+**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. `scripts/measure_resource_budget.py` records current process working sets and enforces one-heavy-CAD-app-at-a-time policy for the 8GB host. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
 
 **Goal:** Resolve all UNVERIFIED items before writing integration code.
 
 ### Deliverables
 - `environment.json` — Python version, Rhino/SW/Maxsurf exact versions, paths, bitness, OS
-- Measured resource budget: concurrent memory of all software + backend + browser
+- Measured resource budget: `data/resource_budget.json` from `scripts/measure_resource_budget.py`; current CAD processes and serialized execution policy recorded
 - Rhino 6 spike report (transport method selection, see `RHINO6_INTEGRATION_SPIKE.md`)
 - SOLIDWORKS 2022 probe: detected? version? COM available? license state?
 - Maxsurf 20 V8i probe: detected? version? file formats? automation interface?
