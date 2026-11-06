@@ -17,6 +17,16 @@ def test_capability_report_has_safe_unknowns(monkeypatch):
     assert capabilities["sw.create_test_part"] == "UNKNOWN"
 
 
+def test_document_capabilities_require_active_document(monkeypatch):
+    connector = SolidWorks2022Connector()
+    monkeypatch.setattr(connector, "get_version", lambda: "30.1")
+    monkeypatch.setattr(connector, "com_probe", lambda: {"available": True, "version": "30.1"})
+    monkeypatch.setattr(connector, "inspect_active_document", lambda operation: {"available": False})
+    capabilities = {capability.name: capability.status.value for capability in connector.get_capabilities()}
+    assert capabilities["sw.get_document_info"] == "UNKNOWN"
+    assert capabilities["sw.list_features"] == "UNKNOWN"
+
+
 def test_capability_endpoint():
     if DB_PATH.exists():
         DB_PATH.unlink()

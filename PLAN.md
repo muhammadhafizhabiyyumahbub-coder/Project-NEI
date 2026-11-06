@@ -209,7 +209,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 6 — SOLIDWORKS 2022 connector
 
-**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime document-level operations remain UNKNOWN until a live SOLIDWORKS document is inspected.
+**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Capability reporting now requires a live active document before marking read-only document/feature inspection SUPPORTED; runtime verification remains UNKNOWN when no document is open.
 
 **Goal:** Read-only inspection + one safe write operation.
 
