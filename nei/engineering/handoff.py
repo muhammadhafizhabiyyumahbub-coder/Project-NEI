@@ -124,6 +124,12 @@ def validate_transfer(
     Both bboxes must be in the same unit (canonical SI, meters).
     Returns a structured result; caller decides NEEDS_REVIEW vs COMPLETED.
     """
+    if len(source_bbox) != 3 or len(target_bbox) != 3:
+        raise ValueError("Bounding boxes must contain exactly three dimensions")
+    if tolerance < 0:
+        raise ValueError("Transfer tolerance must be non-negative")
+    if any(value < 0 for value in (*source_bbox, *target_bbox)):
+        raise ValueError("Bounding box dimensions must be non-negative")
     diffs = [abs(a - b) for a, b in zip(source_bbox, target_bbox)]
     ok = all(d <= tolerance for d in diffs)
     return {

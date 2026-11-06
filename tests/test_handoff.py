@@ -32,6 +32,14 @@ def test_validate_transfer_passes_within_tolerance():
     assert result["max_diff_m"] < 0.005
 
 
+def test_validate_transfer_rejects_invalid_input():
+    import pytest
+    with pytest.raises(ValueError):
+        validate_transfer((1, 2), (1, 2, 3))
+    with pytest.raises(ValueError):
+        validate_transfer((1, 2, 3), (1, 2, 3), tolerance=-1)
+
+
 def test_validate_transfer_fails_beyond_tolerance():
     result = validate_transfer(
         source_bbox=(0.01, 0.003, 0.001),
