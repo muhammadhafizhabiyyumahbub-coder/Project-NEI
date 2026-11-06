@@ -32,9 +32,9 @@ async def record_proven_evidence():
 
     # 3. Maxsurf
     msd_path = "data/projects/capability-probe/maxsurf/artifacts/Untitled.msd"
-    msd_sha = "c3cb80611d51e9f22c8391164f676182cf7229d6e2b883c7c273c8692e2eb266"
     if not Path(msd_path).exists():
         raise FileNotFoundError(f"Missing sandbox artifact: {msd_path}")
+    msd_sha = __import__("hashlib").sha256(Path(msd_path).read_bytes()).hexdigest()
     export_path = "data/projects/capability-probe/maxsurf/artifacts/20261105_182721_Untitled.msd"
     if not Path(export_path).exists():
         raise FileNotFoundError(f"Missing sandbox artifact: {export_path}")
