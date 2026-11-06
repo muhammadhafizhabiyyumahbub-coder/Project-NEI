@@ -282,19 +282,41 @@ async def task_verification_summary(task_id: str):
         if not matching_artifact:
             approval = {**approval, "status": "stale"}
     checks = verification.get("checks", []) if verification else []
+    stability_metrics = await _task_stability_metrics(task)
     return {
         "task_id": task_id,
         "artifact_integrity": all(c.get("result") == "PASSED" for c in checks if c.get("target") == "artifact_saved") if any(c.get("target") == "artifact_saved" for c in checks) else "not_verified",
         "verification_status": verification.get("status") if verification else "not_verified",
         "reopen_verified": any((e.get("metadata") or {}).get("reopen_verified") is True for e in await _task_evidence_rows(task_id)),
         "hydrostatics_status": _hydrostatics_status(checks),
-        "stability_status": _stability_status(checks),
+        "stability_status": stability_metrics["status"] if stability_metrics["status"] in {"stable", "unstable", "neutral"} else _stability_status(checks),
+        "metacentric_height_m": stability_metrics["gm"],
         "fairness_status": _fairness_status(checks, await _task_evidence_rows(task_id)),
         "watertight_status": _watertight_status(checks, await _task_evidence_rows(task_id)),
         "engineering_approval": approval["status"] if approval else "not_performed",
         "approval_artifact_sha256": approval.get("artifact_sha256") if approval else None,
         "overall_status": "approved" if approval and approval["status"] == "approved" else "not_ready",
     }
+
+
+async def _task_stability_metrics(task: dict) -> dict:
+    """Read explicit stability result from latest deterministic calculation."""
+    raw_ids = task.get("calc_run_ids")
+    if not raw_ids:
+        return {"status": None, "gm": None}
+    try:
+        run_ids = json.loads(raw_ids)
+    except (TypeError, json.JSONDecodeError):
+        return {"status": None, "gm": None}
+    if not run_ids:
+        return {"status": None, "gm": None}
+    async with get_db() as db:
+        rows = await db.execute_fetchall("SELECT result_json FROM calculation_runs WHERE id = ?", (run_ids[-1],))
+    if not rows or not rows[0][0]:
+        return {"status": None, "gm": None}
+    result = json.loads(rows[0][0])
+    calculations = result.get("calculations", {})
+    return {"status": calculations.get("stability_status"), "gm": calculations.get("metacentric_height_m")}
 
 
 def _hydrostatics_status(checks: list[dict]) -> str:

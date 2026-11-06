@@ -1,6 +1,6 @@
 import { useTask } from "../hooks/useTask";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, getTaskEvidence, getTaskArtifacts, getTaskApproval, getVerificationSummary, type CalculationRun } from "../api/client";
+import { cancelTask, executeTask, verifyTask, runTask, getCalculationRun, getTaskEvidence, getTaskArtifacts, getTaskApproval, getVerificationSummary, artifactDownloadUrl, type CalculationRun } from "../api/client";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
