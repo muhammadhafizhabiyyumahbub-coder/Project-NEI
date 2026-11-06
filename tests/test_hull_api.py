@@ -47,6 +47,10 @@ def test_hull_preview_persists_trace_and_completes():
     assert body["result"]["status"] == "PREVIEW_ONLY"
     assert body["result"]["connector_status"] == "NOT_GENERATED"
     assert body["result"]["calculations"]["displacement_volume_m3"] == 468.0
+    assert body["result"]["report_artifact"]["filename"] == "hull_engineering_report.json"
+    report = client.get(f"/api/v1/tasks/{task['id']}/artifacts/hull_engineering_report.json")
+    assert report.status_code == 200
+    assert report.json()["status"] == "NOT_FOR_APPROVAL"
 
 
 def test_hull_task_rejects_invalid_geometry():

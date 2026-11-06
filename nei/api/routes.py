@@ -711,6 +711,20 @@ async def run_task_endpoint(task_id: str):
                 from nei.engineering.hull import HullDesignRequest, hull_preview, record_hull_run
                 hull = HullDesignRequest.model_validate(hull_design)
                 result = hull_preview(hull)
+                from nei.engineering.report import build_hull_report
+                from nei.core import artifact_store
+                report = build_hull_report(
+                    task_id=task_id,
+                    hull=hull.model_dump(),
+                    preview=result,
+                )
+                report_content = _json.dumps(report, indent=2, sort_keys=True).encode()
+                report_sha = await artifact_store.save_artifact(task_id, "hull_engineering_report.json", report_content)
+                result["report_artifact"] = {
+                    "filename": "hull_engineering_report.json",
+                    "sha256": report_sha,
+                    "status": report["status"],
+                }
                 run_id = await record_hull_run(task_id, hull, result)
                 async with get_db() as db:
                     await db.execute("UPDATE tasks SET calc_run_ids = ? WHERE id = ?", (_json.dumps([run_id]), task_id))
