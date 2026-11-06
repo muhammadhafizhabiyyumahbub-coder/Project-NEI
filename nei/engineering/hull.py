@@ -72,10 +72,11 @@ def hull_preview(request: HullDesignRequest) -> dict:
         })
     froude = (request.speed * 0.514444) / math.sqrt(9.80665 * request.loa) if request.speed else 0.0
     
-    from nei.engineering.geometry.hull_sections import generate_sections, section_manifest, section_volume, validate_sections
+    from nei.engineering.geometry.hull_sections import generate_sections, section_manifest, section_volume, validate_sections, section_lcg
     sections = generate_sections(request.loa, request.beam, request.draft)
     section_validation = validate_sections(sections, request.loa, request.beam, request.draft)
     geometry_volume = section_volume(sections, request.draft)
+    lcb = section_lcg(sections, request.draft)
     volume_delta = geometry_volume - volume
     volume_delta_ratio = abs(volume_delta) / volume if volume else 0.0
     volume_consistency = "passed" if volume_delta_ratio <= 0.05 else "failed"
@@ -96,6 +97,7 @@ def hull_preview(request: HullDesignRequest) -> dict:
             "volume_consistency": volume_consistency,
             "waterplane_area_m2": round(waterplane_area, 6),
             "center_of_buoyancy_z_m": round(kb, 6),
+            "center_of_buoyancy_x_m": round(lcb, 6),
             "metacentric_height_m": round(gm, 6) if gm is not None else None,
             "stability_status": stability_status,
             "loading_conditions": loading_results,

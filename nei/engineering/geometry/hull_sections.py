@@ -49,3 +49,13 @@ def validate_sections(sections: list[HullSection], loa: float, beam: float, draf
         and all(s.height == draft for s in sections)
     )
     return {"status": "passed" if valid else "failed", "section_count": len(sections)}
+
+
+def section_lcg(sections: list[HullSection], draft: float) -> float:
+    """Longitudinal center of gravity from section moment method."""
+    if len(sections) < 2:
+        return 0.0
+    areas = [2.0 * section.half_breadth * draft for section in sections]
+    moment = sum(areas[i] * sections[i].station for i in range(len(sections)))
+    total_area = sum(areas)
+    return moment / total_area if total_area > 0 else 0.0
