@@ -6,6 +6,8 @@ unknown connector IDs are rejected rather than reported through a mock probe.
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
+import json
+
 from nei.core.database import get_db
 from nei.connectors.registry import get_connector_class
 
@@ -183,12 +185,25 @@ async def probe_connector(connector_id: str):
     version = conn.get_version()
     ts = datetime.now(timezone.utc).isoformat()
     status = "DETECTED" if det.detected else "NOT_FOUND"
+    com = conn.com_probe() if hasattr(conn, "com_probe") else None
     async with get_db() as db:
         await db.execute(
             "INSERT OR REPLACE INTO connectors (id, name, status, last_probe_ts, version, exe_path) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (connector_id, conn.name, status, ts, version,
              det.exe_path if det.detected else None),
+        )
+        await db.execute(
+            "INSERT INTO connector_probes (connector_id, probe_type, result_json, timestamp) "
+            "VALUES (?, ?, ?, ?)",
+            (connector_id, "detect", json.dumps({
+                "detected": det.detected,
+                "version": version,
+                "exe_path": det.exe_path,
+                "status": status,
+                "notes": det.notes,
+                **({"com": com} if com is not None else {}),
+            }), ts),
         )
         await db.commit()
 
@@ -203,8 +218,8 @@ async def probe_connector(connector_id: str):
     }
 
     # SOLIDWORKS reports COM attach status alongside the filesystem probe.
-    if connector_id == "solidworks2022" and hasattr(conn, "com_probe"):
-        response["com"] = conn.com_probe()
+    if com is not None:
+        response["com"] = com
 
     return response
 

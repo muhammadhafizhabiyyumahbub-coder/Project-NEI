@@ -1,10 +1,11 @@
 import asyncio
 import hashlib
+import json
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from nei.main import app
-from nei.core.database import init_db, DB_PATH
+from nei.core.database import init_db, DB_PATH, get_db
 from nei.connectors.evidence import (
     record_rhino_hull_proxy_evidence,
     record_solidworks_inspection_evidence,
@@ -31,6 +32,30 @@ def test_record_connector_evidence_rejects_unknown_connector():
             "unknown-connector", "some.capability", "probe",
             artifact_sha256="abc"
         ))
+
+
+def test_connector_probe_writes_probe_history():
+    client = setup_db()
+    r = client.post("/api/v1/connectors/rhino6/probe")
+    assert r.status_code == 200
+
+    rows = asyncio.run(_fetch_probe_rows("rhino6"))
+    assert len(rows) >= 1
+    probe_type, result_json, timestamp = rows[-1]
+    assert probe_type == "detect"
+    assert timestamp
+    result = json.loads(result_json)
+    assert "detected" in result
+    assert "status" in result
+
+
+async def _fetch_probe_rows(connector_id: str):
+    async with get_db() as db:
+        return await db.execute_fetchall(
+            "SELECT probe_type, result_json, timestamp FROM connector_probes "
+            "WHERE connector_id = ? ORDER BY timestamp ASC",
+            (connector_id,),
+        )
 
 
 def test_connector_evidence_recording():

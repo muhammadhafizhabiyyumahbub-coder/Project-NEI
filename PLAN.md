@@ -9,7 +9,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 0 — Audit, environment, and risk spikes
 
-**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. `scripts/measure_resource_budget.py` records current process working sets and enforces one-heavy-CAD-app-at-a-time policy for the 8GB host. `data/license_policy.json` documents license/automation policy as UNVERIFIED without accessing credentials or claiming permission. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation.
+**Status:** `data/environment.json` now resolves GPU, SOLIDWORKS/Maxsurf/Rhino versions, SOLIDWORKS COM availability, Maxsurf registry installation, file formats, and COM automation status. `scripts/measure_resource_budget.py` records current process working sets and enforces one-heavy-CAD-app-at-a-time policy for the 8GB host. `data/license_policy.json` documents license/automation policy as UNVERIFIED without accessing credentials or claiming permission. Hardware fields are verified; license status remains UNVERIFIED pending vendor documentation. **All Phase 0 acceptance criteria met: hardware fields resolved, Rhino 6 transport method selected (RhinoPython), probe reports recorded, license state documented (UNVERIFIED allowed per spec).**
 
 **Goal:** Resolve all UNVERIFIED items before writing integration code.
 
@@ -260,7 +260,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 8 — Cross-software workflow
 
-**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, handoff-chain metadata validation, operation allowlisting, bounding-box transfer checks, and failure-safe path validation are implemented. Approval enforcement verifies artifact bytes on disk match the SHA-256 recorded in the evidence row, closing a tamper window between evidence write and approval. Handoff metadata now fails closed for unsupported operations or incomplete software/version/path records. Evidence recording now validates connector ID against registry before persisting any record; unknown connectors fail fast with ValueError. SOLIDWORKS COM is available locally, but document-level transfer has not been version-tested against a live SOLIDWORKS document; end-to-end CAD-to-CAD transfer remains blocked until runtime workflows are demonstrated.
+**Status:** Sequential sandbox handoff protocol, SHA-256 provenance manifests, unit-labelled artifacts, handoff-chain metadata validation, operation allowlisting, bounding-box transfer checks, and failure-safe path validation are implemented. Approval enforcement verifies artifact bytes on disk match the SHA-256 recorded in the evidence row, closing a tamper window between evidence write and approval. Handoff metadata now fails closed for unsupported operations or incomplete software/version/path records. Evidence recording now validates connector ID against registry before persisting any record; unknown connectors fail fast with ValueError. **Connector probe history is now persisted to `connector_probes` table on every probe call.** SOLIDWORKS COM is available locally, but document-level transfer has not been version-tested against a live SOLIDWORKS document; end-to-end CAD-to-CAD transfer remains blocked until runtime workflows are demonstrated.
 
 **Goal:** Controlled artifact handoff between two or more software packages.
 
