@@ -80,7 +80,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 2 — Frontend foundation
 
-**Status:** Vite/React UI is implemented under `apps/ui/` with generated API types, dashboard/task workflows, SSE updates, connector health, and static build path `apps/ui/dist/`. Production TypeScript build passes; lint reports only existing React effect warnings.
+**Status:** Vite/React UI is implemented under `apps/ui/` with generated API types, dashboard/task workflows, SSE updates, connector health, and static build path `apps/ui/dist/`. Production TypeScript build and lint pass without warnings.
 
 **Goal:** Dashboard usable for task management.
 

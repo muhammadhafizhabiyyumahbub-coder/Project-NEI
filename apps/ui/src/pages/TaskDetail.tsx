@@ -36,7 +36,7 @@ export function TaskDetail() {
     try {
       const ids = JSON.parse(task.calc_run_ids) as string[];
       if (ids[0]) getCalculationRun(ids[0]).then(setCalcRun).catch(() => setCalcRun(null));
-    } catch { setCalcRun(null); }
+    } catch { /* malformed calculation IDs leave prior result visible */ }
   }, [task?.calc_run_ids]);
 
   const { mutate: cancel, isPending: isCancelling } = useMutation({
