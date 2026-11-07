@@ -462,7 +462,11 @@ class Rhino6Connector(BaseConnector):
         tmp_script.write_text(script_content, encoding="utf-8")
 
         result = self._run_rhino_script(str(tmp_script), tmp, timeout_s)
-        tmp_script.unlink(missing_ok=True)
+        try:
+            tmp_script.unlink(missing_ok=True)
+        except PermissionError:
+            # Rhino may still hold the script briefly after execfile returns.
+            pass
 
         if result is None:
             return ToolResult(success=False, error="Rhino script did not produce result JSON")
