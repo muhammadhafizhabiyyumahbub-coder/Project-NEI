@@ -42,6 +42,8 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 1 — Backend foundation
 
+**Status:** FastAPI backend with task lifecycle, policy gate, artifact store, audit logging, SSE, and mock tool router is implemented and covered by tests. The policy gate now rejects unknown or malformed risk levels as forbidden in addition to explicitly banning L3.
+
 **Goal:** Runnable backend with task lifecycle, no CAD needed.
 
 ### Deliverables

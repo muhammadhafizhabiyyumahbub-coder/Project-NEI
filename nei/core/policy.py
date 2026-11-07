@@ -12,16 +12,20 @@ FORBIDDEN = {"L3"}
 
 
 def risk_allows_autopass(risk_level: str) -> bool:
-    """True if risk_level can skip WAITING_APPROVAL."""
+    """True if risk_level can skip WAITING_APPROVAL.
+    Unknown/malformed levels are forbidden, not auto-passed."""
     return risk_level in ALLOWED_RISK
 
 
 def risk_requires_approval(risk_level: str) -> bool:
+    """L2 requires explicit approval."""
     return risk_level in REQUIRES_APPROVAL
 
 
 def risk_forbidden(risk_level: str) -> bool:
-    return risk_level in FORBIDDEN
+    """L3 and any unrecognized risk level are forbidden."""
+    known = {"L0", "L1", "L2", "L3"}
+    return risk_level in FORBIDDEN or risk_level not in known
 
 
 def validate_sandbox_path(path: str, project_root: str) -> bool:

@@ -56,6 +56,13 @@ def test_policy_l3_forbidden():
     assert risk_forbidden("L3")
     assert not risk_forbidden("L0")
     assert not risk_forbidden("L2")
+    # Unknown / malformed risk levels must be forbidden, not auto-passed
+    assert risk_forbidden("L9")
+    assert risk_forbidden("")
+    assert risk_forbidden("bogus")
+    assert not risk_allows_autopass("L9")
+    assert not risk_allows_autopass("")
+    assert not risk_requires_approval("L9")
 
 
 def test_sandbox_path(tmp_path):
