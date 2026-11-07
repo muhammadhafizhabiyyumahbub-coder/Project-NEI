@@ -83,7 +83,7 @@ export function TaskDetail() {
               <button onClick={() => cancel(taskId!)} disabled={isCancelling} className="text-error">Cancel</button>
             </div>
             <div className="text-sm flex gap-4">
-              <div><span>State:</span> <span className="ml-2 font-mono">{task.state}</span></div>
+              <div><span>State:</span> <span className="task-state ml-2 font-mono">{task.state}</span></div>
               <div><span>Domain:</span> <span className="ml-2">{task.domain}</span></div>
               <div><span>Risk:</span> <span className="ml-2">{task.risk_level}</span></div>
             </div>

@@ -67,8 +67,9 @@ test.describe('Phase 5 calculations UI', () => {
     await page.waitForTimeout(1500);
 
     // Result block with evidence_status should be visible
-    await expect(page.locator('h4:has-text("Result")')).toBeVisible();
-    const resultText = await page.locator('pre').first().textContent();
-    expect(resultText).toContain('30');
+    const resultPanel = page.locator('.result-panel');
+    await expect(resultPanel).toBeVisible();
+    await expect(resultPanel.locator('strong')).toContainText('30');
+    await expect(resultPanel.locator('span')).toBeVisible();
   });
 });
