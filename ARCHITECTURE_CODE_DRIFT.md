@@ -23,7 +23,7 @@
 | `nei/reporting/` | No `nei/reporting/` | **DRIFT** |
 | `docs/archive/` | Not found in repo | **DRIFT** |
 | `apps/ui/` (Vite+React+TS+Tailwind) | Exists at `apps/ui/` with `src/pages/`, `src/components/`, `src/hooks/` | OK |
-| `frontend/dist` (static build path in config.py) | UI is at `apps/ui/`, build output should be `apps/ui/dist/` | **DRIFT** (Butir 9) |
+| `frontend/dist` (static build path in config.py) | UI is at `apps/ui/`, build output should be `frontend/dist/` | **DRIFT** (Butir 9) |
 | `NEI_ARCHITECTURE_V2_PROMPT.md` in root | Should be in `docs/prompts/` | **DRIFT** (Butir 11) |
 
 ---
