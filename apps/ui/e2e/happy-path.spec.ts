@@ -20,7 +20,7 @@ test('Phase 1 happy path: project → task → cancel', async ({ page }) => {
 
   // 4. Create a task
   await page.fill('input[name="user_request"]', 'playwright test task');
-  await page.click('button:has-text("Create Task")');
+  await page.click('button:has-text("Create task")');
 
   // 5. Task list refreshes, task visible
   await expect(page.locator('li a:has-text("playwright test task")').first()).toBeVisible();

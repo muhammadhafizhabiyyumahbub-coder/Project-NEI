@@ -9,7 +9,7 @@ test('Phase 3: project → task → create box → verify → completed', async 
 
   // 2. Create a box task
   await page.fill('input[name="user_request"]', 'create 10x3x1 box in rhino');
-  await page.click('button:has-text("Create Task")');
+  await page.click('button:has-text("Create task")');
   await expect(page.locator('li a:has-text("create 10x3x1 box in rhino")').first()).toBeVisible();
 
   // 3. Open the task detail
