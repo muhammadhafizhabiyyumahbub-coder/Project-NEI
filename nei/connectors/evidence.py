@@ -24,6 +24,9 @@ async def record_connector_evidence(
     notes: Optional[str] = None,
 ) -> str:
     """Record verified probe artifact or inspection result. Returns evidence record ID."""
+    from nei.connectors.registry import get_connector_class
+    if get_connector_class(connector_id) is None:
+        raise ValueError(f"Unknown connector: {connector_id}")
     import uuid
 
     evidence_id = str(uuid.uuid4())

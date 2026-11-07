@@ -9,6 +9,7 @@ from nei.connectors.evidence import (
     record_rhino_hull_proxy_evidence,
     record_solidworks_inspection_evidence,
     record_maxsurf_probe_evidence,
+    record_connector_evidence,
 )
 
 def setup_db():
@@ -21,6 +22,15 @@ def test_unknown_connector_evidence_returns_404():
     client = setup_db()
     response = client.get("/api/v1/connectors/not-registered/evidence")
     assert response.status_code == 404
+
+
+def test_record_connector_evidence_rejects_unknown_connector():
+    import pytest
+    with pytest.raises(ValueError, match="Unknown connector"):
+        asyncio.run(record_connector_evidence(
+            "unknown-connector", "some.capability", "probe",
+            artifact_sha256="abc"
+        ))
 
 
 def test_connector_evidence_recording():
