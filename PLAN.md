@@ -213,7 +213,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 6 — SOLIDWORKS 2022 connector
 
-**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime probe on the available active document (`20261106_205156_sw_export.SLDPRT`) now confirms document metadata and 17 features; runtime verification remains limited to read-only inspection because no production mutation is permitted. SOLIDWORKS export-to-sandbox probe succeeded; source file checksum unchanged.
+**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Connector tests pass, and the recorded runtime probe confirms document metadata and 17 features on `20261106_205156_sw_export.SLDPRT`; export-to-sandbox preserved the source checksum. Runtime verification remains limited to read-only inspection because `sw.inspect_feature`, `sw.export_copy`, and `sw.create_test_part` lack complete version-tested evidence for production dispatch.
 
 **Goal:** Read-only inspection + one safe write operation.
 
