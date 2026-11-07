@@ -237,7 +237,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 7 — Maxsurf 20 V8i connector
 
-**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based. Runtime probe confirms Maxsurf process availability and read-only inspection of `.msd` files in `D:\File Maxsurf` with SHA-256; sandbox import/export and generated-artifact verification remain implemented. NEI-driven input exchange remains UNKNOWN.
+**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based. Runtime probe confirms Maxsurf process availability and read-only inspection of `.msd` files in `D:\File Maxsurf` with SHA-256; sandbox import/export and generated-artifact verification remain implemented. NEI-driven input exchange remains UNKNOWN. Human declared valid SOLIDWORKS/Maxsurf licenses and permitted read-only/sandbox exchange on 2026-11-07; declaration is recorded without storing credentials or treating it as vendor proof. Maxsurf Stability output (stability report/GZ curve) is still required before production claims.
 
 **Goal:** File-exchange or API-driven Maxsurf integration.
 
@@ -282,7 +282,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 9 — Advanced engineering domains
 
-**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, dependency-free PDF preview export (`nei/engineering/pdf_report.py`), and explicit non-approval limitations are implemented. An independent arithmetic reference case now locks proxy GZ point and trapezoidal-area behavior. Production/classification outputs remain blocked by solver validation, approved formula evidence, and authoritative independent reference cases.
+**Status:** Deterministic preview reports, loading stability indicators, longitudinal balance preview, GZ curve proxy with UNVERIFIED classification criteria baseline (`nei/engineering/gz.py`), evidence-linked JSON artifacts, dependency-free PDF preview export (`nei/engineering/pdf_report.py`), and explicit non-approval limitations are implemented. An independent arithmetic reference case now locks proxy GZ point and trapezoidal-area behavior. Production/classification outputs remain blocked by solver validation, approved formula evidence, and authoritative independent reference cases. Human supplied Maxsurf Stability license declaration, but no stability report or GZ curve output has been produced yet.
 
 **Goal:** Extend evidence + calculation to more naval architecture / marine engineering domains.
 
