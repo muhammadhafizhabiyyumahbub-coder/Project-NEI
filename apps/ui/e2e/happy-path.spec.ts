@@ -5,7 +5,7 @@ test('Phase 1 happy path: project → task → cancel', async ({ page }) => {
 
   // 1. Dashboard loads with project list
   await page.goto('/');
-  await expect(page.locator('h2')).toContainText('Dashboard');
+  await expect(page.locator('h2')).toContainText('Workspace overview');
 
   // 2. Go to Projects, create a new project
   await page.click('a[href="/projects"]');
