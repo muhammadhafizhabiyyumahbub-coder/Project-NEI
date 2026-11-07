@@ -55,13 +55,15 @@ test.describe('Phase 5 calculations UI', () => {
     await page.waitForTimeout(2000);
 
     // The formula list should include our seeded box_volume
-    const formulaRow = page.locator(`li:has-text("box_volume")`).first();
+    const formulaRow = page.locator('button.formula-row:has-text("box volume")').first();
     await expect(formulaRow).toBeVisible();
-    await formulaRow.locator('button:has-text("Run")').click();
+    await formulaRow.click();
 
-    // Enter inputs JSON
-    await page.fill('textarea', JSON.stringify({ length: 10, width: 3, height: 1 }));
-    await page.click('button:has-text("Run Calculation")');
+    // Enter one field per quantity
+    await page.locator('input[name="length"], input[placeholder="10"]').fill('10');
+    await page.locator('input[name="width"], input[placeholder="3"]').fill('3');
+    await page.locator('input[name="height"], input[placeholder="1"]').fill('1');
+    await page.click('button:has-text("Run calculation")');
     await page.waitForTimeout(1500);
 
     // Result block with evidence_status should be visible
