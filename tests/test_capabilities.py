@@ -4,6 +4,14 @@ from nei.main import app
 from nei.core.database import DB_PATH, init_db
 
 
+def test_unknown_connector_probe_returns_404():
+    if DB_PATH.exists():
+        DB_PATH.unlink()
+    asyncio.run(init_db())
+    response = TestClient(app).post("/api/v1/connectors/not-registered/probe")
+    assert response.status_code == 404
+
+
 def test_capability_mapping_includes_internal_and_hull_statuses():
     if DB_PATH.exists():
         DB_PATH.unlink()

@@ -42,7 +42,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 1 — Backend foundation
 
-**Status:** FastAPI backend with task lifecycle, policy gate, artifact store, audit logging, SSE, and mock tool router is implemented and covered by tests. The policy gate now rejects unknown or malformed risk levels as forbidden in addition to explicitly banning L3. Phase 2 spec task-approval decision endpoints are implemented: `POST /projects/{id}/tasks/{id}/approvals` (approve → QUEUED, reject → NEEDS_REVIEW) and `GET` listing; state machine now allows WAITING_APPROVAL → NEEDS_REVIEW on reject. New migration 008 (`task_approvals`) and 4 route tests added.
+**Status:** FastAPI backend with task lifecycle, policy gate, artifact store, audit logging, SSE, connector probe routes, and mock tool router is implemented and covered by tests. Unknown connector probe IDs fail with 404 instead of creating mock probe records. The policy gate now rejects unknown or malformed risk levels as forbidden in addition to explicitly banning L3. Phase 2 spec task-approval decision endpoints are implemented: `POST /projects/{id}/tasks/{id}/approvals` (approve → QUEUED, reject → NEEDS_REVIEW) and `GET` listing; state machine now allows WAITING_APPROVAL → NEEDS_REVIEW on reject. New migration 008 (`task_approvals`) and 4 route tests added.
 
 **Goal:** Runnable backend with task lifecycle, no CAD needed.
 

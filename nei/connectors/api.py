@@ -1,8 +1,7 @@
-"""Connector API routes.
+"""Connector capability, probe, inspection, and evidence routes.
 
-Phase 2: mock connectors report detected/unknown. Phase 3+ replace `mock_probe`
-with real Rhino/SW/Maxsurf probes (kept as `connectors/{id}/probe` endpoint so
-frontend is stable across phases).
+Registered connectors use their concrete detection and capability implementations;
+unknown connector IDs are rejected rather than reported through a mock probe.
 """
 from datetime import datetime, timezone
 from pathlib import Path
@@ -168,7 +167,7 @@ async def probe_connector(connector_id: str):
 
     cls = get_connector_class(connector_id)
     if cls is None:
-        return await _mock_probe(connector_id)
+        raise HTTPException(status_code=404, detail="Connector not found")
 
     # Resolve the connector instance (SOLIDWORKS/Maxsurf take an optional exe path).
     kwargs = {}
@@ -248,30 +247,4 @@ async def list_connector_evidence(connector_id: str, capability: str = None):
             }
             for r in rows
         ],
-    }
-
-
-async def _mock_probe(connector_id: str) -> dict:
-    """Fallback mock probe for connectors without a real implementation yet."""
-    ts = datetime.now(timezone.utc).isoformat()
-    async with get_db() as db:
-        rows = await db.execute_fetchall(
-            "SELECT id FROM connectors WHERE id = ?", (connector_id,))
-        if not rows:
-            await db.execute(
-                "INSERT INTO connectors (id, name, status, last_probe_ts) VALUES (?, ?, 'UNKNOWN', ?)",
-                (connector_id, connector_id, ts),
-            )
-        else:
-            await db.execute(
-                "UPDATE connectors SET last_probe_ts = ? WHERE id = ?",
-                (ts, connector_id),
-            )
-        await db.commit()
-    return {
-        "connector_id": connector_id,
-        "detected": None,
-        "version": None,
-        "probe_ts": ts,
-        "note": "Mock probe (Phase 2). Real probe lands in Phase 3+.",
     }
