@@ -80,7 +80,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 2 — Frontend foundation
 
-**Status:** Vite/React UI is implemented under `apps/ui/` with generated API types, dashboard/task workflows, SSE updates, connector health, and static build path `apps/ui/dist/`. Production TypeScript build passes. Lint reports one intentional React effect warning for resetting SSE state when task ID changes. E2E selectors match rendered task and calculation controls. Playwright config now starts/reuses UI and API servers automatically before browser tests; task E2E selectors match nested project-task routes and rendered task-row markup.
+**Status:** Vite/React UI is implemented under `apps/ui/` with generated API types, dashboard/task workflows, SSE updates, connector health, and static build path `apps/ui/dist/`. Production TypeScript build passes. Lint reports one intentional React effect warning for resetting SSE state when task ID changes. E2E selectors match rendered task and calculation controls. Playwright config now starts/reuses UI and API servers automatically before browser tests; task E2E selectors match nested project-task routes and rendered task-row markup. All 6 Playwright E2E tests now pass (fixed task-state class, calculation result panel selectors, dashboard heading text, task-creation/run selectors, server orchestration). All 6 Playwright E2E tests now pass (fixed task-state class, calculation result panel selectors, dashboard heading text, task-creation/run selectors, server orchestration).
 
 **Goal:** Dashboard usable for task management.
 
