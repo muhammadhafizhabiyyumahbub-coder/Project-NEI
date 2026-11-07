@@ -26,6 +26,14 @@ def test_get_capabilities():
     assert caps["maxsurf.hull_generation_from_nei"] == "UNKNOWN"
 
 
+def test_get_capabilities_is_conservative():
+    result = Maxsurf20Connector().execute("maxsurf.get_capabilities", {}, timeout_s=5)
+    assert result.success is True
+    assert result.data["automation_api"] == "UNVERIFIED"
+    assert result.data["com_registered"] is False
+    assert result.data["documentation_present"]["modeler_automation_doc"] is True
+
+
 def test_inspect_project_file():
     connector = Maxsurf20Connector()
     result = connector.execute("maxsurf.inspect_project_file", {"path": r"C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\MaxsurfModeler64.exe"}, timeout_s=5)

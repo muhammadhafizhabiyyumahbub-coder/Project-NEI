@@ -82,7 +82,30 @@ class Maxsurf20Connector(BaseConnector):
             return self._export_copy(parameters)
         if action == "maxsurf.verify_generated_hull":
             return self._verify_generated_hull(parameters)
+        if action == "maxsurf.get_capabilities":
+            return self._get_capabilities()
         raise ValueError(f"Unknown action: {action}")
+
+    def _get_capabilities(self) -> ToolResult:
+        """Report installed automation documentation, without claiming API support."""
+        install_dir = self._candidate_paths()[0].parent
+        manuals = {
+            "modeler_automation_doc": install_dir / "ModelerAutomation.pdf",
+            "stability_automation_doc": install_dir / "StabilityAutomation.pdf",
+        }
+        present = {name: path.exists() for name, path in manuals.items()}
+        return ToolResult(
+            success=True,
+            data={
+                "install_dir": str(install_dir),
+                "automation_api": "UNVERIFIED",
+                "com_registered": False,
+                "documentation": {name: str(path) for name, path in manuals.items()},
+                "documentation_present": present,
+                "file_exchange": {"msd": "SUPPORTED", "mfd": "SUPPORTED"},
+                "read_only": True,
+            },
+        )
 
     def _inspect_project_file(self, parameters: dict) -> ToolResult:
         """Read metadata from .mfd/.msd without opening Maxsurf."""
@@ -205,6 +228,7 @@ class Maxsurf20Connector(BaseConnector):
         return [
             Capability("maxsurf.detect", CapabilityStatus.SUPPORTED, None, "Filesystem probe"),
             Capability("maxsurf.get_version", CapabilityStatus.SUPPORTED, None, "Executable version"),
+            Capability("maxsurf.get_capabilities", CapabilityStatus.SUPPORTED, "20.00.01.59", "Read-only installed documentation and file-format audit; API remains UNVERIFIED."),
             Capability("maxsurf.inspect_project_file", CapabilityStatus.SUPPORTED, "20.00.01.59", "Read-only .msd metadata and SHA-256 verified on sandbox probe."),
             Capability("maxsurf.import_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox copy verified; original checksum unchanged."),
             Capability("maxsurf.export_copy", CapabilityStatus.SUPPORTED, "20.00.01.59", "Sandbox artifact copy verified by matching SHA-256."),
