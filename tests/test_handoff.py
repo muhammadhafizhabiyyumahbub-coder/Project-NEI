@@ -58,6 +58,8 @@ def test_validate_handoff_chain_requires_one_unit_and_hash():
         validate_handoff_chain([valid, HandoffHop("maxsurf20", "20", "import", "y.msd", "def", "MSD", "mm")])
     with pytest.raises(ValueError, match="at least one"):
         validate_handoff_chain([])
+    with pytest.raises(ValueError, match="unsupported operation"):
+        validate_handoff_chain([HandoffHop("rhino6", "6.18", "delete", "x.step", "abc", "STEP", "m")])
 
 
 def test_write_provenance_manifest_rejects_invalid_chain(tmp_path):

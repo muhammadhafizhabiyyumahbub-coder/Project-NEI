@@ -149,6 +149,11 @@ def validate_handoff_chain(chain: list[HandoffHop]) -> dict:
         raise ValueError("Handoff chain contains mixed units")
     if any(not hop.file_sha256 or not hop.file_format for hop in chain):
         raise ValueError("Every handoff hop needs file hash and format")
+    allowed_operations = {"export", "import", "verify"}
+    if any(hop.operation not in allowed_operations for hop in chain):
+        raise ValueError("Handoff hop has unsupported operation")
+    if any(not hop.software or not hop.software_version or not hop.file_path for hop in chain):
+        raise ValueError("Every handoff hop needs software, version, and path")
     return {
         "valid": True,
         "hop_count": len(chain),
