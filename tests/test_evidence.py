@@ -82,10 +82,42 @@ def test_ingest_is_idempotent_on_duplicate_checksum(tmp_path):
     assert second["id"] == first["id"]
     assert second["checksum_sha256"] == first["checksum_sha256"]
     assert second["ingest_duplicated"] is True
+    assert second["intact"] is True
 
     # No phantom source row was created
     listed = client.get("/api/v1/evidence/sources").json()
     assert len([s for s in listed if s["checksum_sha256"] == first["checksum_sha256"]]) == 1
+
+
+def test_ingest_duplicate_checksum_detects_tamper(tmp_path):
+    """If the stored file was modified after ingest, the duplicate ingest
+    must surface the integrity problem."""
+    src_file = tmp_path / "tamper.txt"
+    src_file.write_text("original", encoding="utf-8")
+    client = setup()
+
+    first = client.post("/api/v1/evidence/sources", json={
+        "title": "First",
+        "source_type": "other",
+        "authority_level": "other",
+        "local_file_path": str(src_file),
+    }).json()
+
+    # Tamper with the stored document before re-ingesting
+    stored = Path(first["local_file_path"])
+    stored.write_text("modified", encoding="utf-8")
+
+    second = client.post("/api/v1/evidence/sources", json={
+        "title": "Second",
+        "source_type": "other",
+        "authority_level": "other",
+        "local_file_path": str(src_file),
+    }).json()
+
+    assert second["id"] == first["id"]
+    assert second["ingest_duplicated"] is True
+    assert second["intact"] is False
+
 
 
 

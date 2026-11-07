@@ -158,7 +158,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 4 — Evidence engine + EEP
 
-**Status:** Source ingestion with sandbox validation, SHA-256 provenance, PDF/text extraction, page-aware chunks, SQLite FTS5 search, formula lifecycle enforcement, citations, and UNVERIFIED status handling are implemented and covered by tests. Ingestion is idempotent on checksum: repeated calls with the same file body return the canonical source record instead of duplicating the row. Production evidence remains dependent on permitted authoritative source documents.
+**Status:** Source ingestion with sandbox validation, SHA-256 provenance, PDF/text extraction, page-aware chunks, SQLite FTS5 search, formula lifecycle enforcement, citations, and UNVERIFIED status handling are implemented and covered by tests. Ingestion is idempotent on checksum: repeated calls with the same file body return the canonical source record instead of duplicating the row. A duplicate ingest now re-verifies the stored document against its recorded SHA-256 and reports `intact` so integrity drift is visible even before the explicit checksum endpoint is called. Production evidence remains dependent on permitted authoritative source documents.
 
 **Goal:** Traceable technical evidence with provenance.
 
