@@ -59,17 +59,19 @@
 | `/engineering/reference-case` | POST | ✓ |
 | `/engineering/reference-case-advance` | POST | ✓ |
 
-### 2.2 Endpoints in `API_SPEC.md` Phase 1–2 that are **not yet implemented**
+### 2.2 Endpoints in `API_SPEC.md` Phase 1–2
 
 | Endpoint | Spec location | Status |
 |----------|--------------|--------|
-| `/tasks/{id}/approve` (approvals) | API_SPEC Phase 2 | **MISSING** |
-| `/tasks/{id}/provide-input` | API_SPEC Phase 2 | **MISSING** |
-| `/tasks/{id}/retry` | API_SPEC Phase 2 | **MISSING** |
-| `/tasks/{id}/events` (SSE streaming) | API_SPEC Phase 1 | Implemented as `/tasks/{id}/events_raw` (SSE endpoint at `sse.router`) — naming differs from spec |
-| `/approvals/{id}` | API_SPEC Phase 2 | **MISSING** |
-| `/approvals/{id}/approve` | API_SPEC Phase 2 | **MISSING** |
-| `/approvals/{id}/reject` | API_SPEC Phase 2 | **MISSING** |
+| `/tasks/{id}/approve` | API task-control extension | Implemented; `WAITING_APPROVAL` → `QUEUED` |
+| `/tasks/{id}/provide-input` | API_SPEC Phase 2 | Implemented; `NEEDS_INPUT` → `PLANNING` |
+| `/tasks/{id}/retry` | API_SPEC Phase 2 | Implemented; child retry task for `FAILED`/`NEEDS_REVIEW` |
+| `/tasks/{id}/events` (SSE streaming) | API_SPEC Phase 1 | Implemented by `sse.router`; legacy `/tasks/{id}/events_raw` remains |
+| `/projects/{project_id}/tasks/{task_id}/approvals` GET | API_SPEC Phase 2 | Implemented; lists auditable decisions |
+| `/projects/{project_id}/tasks/{task_id}/approvals` POST | API_SPEC Phase 2 | Implemented; approve → `QUEUED`, reject → `NEEDS_REVIEW` |
+| `/approvals/{id}` and action subroutes | Not present in current API_SPEC | Not applicable |
+
+Approval decision endpoints were added in commit `1f1444d`, with migration `008_task_approvals.sql` and route tests.
 
 **Recommendation:** Implement missing Phase 2 approval and task-control endpoints as part of a separate scope. Do **not** add them to the audit-fix commit set.
 
