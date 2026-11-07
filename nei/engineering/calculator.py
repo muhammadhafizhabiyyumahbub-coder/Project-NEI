@@ -98,6 +98,8 @@ def _parse_inputs(impl: dict, raw_inputs: dict) -> dict:
         v = out.get(param)
         if isinstance(v, str):
             out[param] = parse_quantity(v, target)
+        elif isinstance(v, bool) or (isinstance(v, (int, float)) and not __import__("math").isfinite(float(v))):
+            raise ValueError(f"{param} must be a finite number or unit quantity")
     return out
 
 

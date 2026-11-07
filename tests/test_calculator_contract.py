@@ -22,3 +22,17 @@ def test_formula_requires_approved_status_and_parses_units():
     sandbox = run_formula(formula["id"], {"length": "1 m", "width": "2 m", "height": "3 m"}, research=True)
     assert sandbox["result"] == 6.0
     assert sandbox["evidence_status"] == "UNVERIFIED"
+
+
+def test_formula_rejects_non_finite_and_boolean_numeric_inputs():
+    setup_db()
+    formula = asyncio.run(register_formula(
+        "box_volume", "geometry", "V = L * W * H",
+        source_refs=["source-reference"],
+    ))
+    for value in (float("nan"), float("inf"), True):
+        result = run_formula(formula["id"], {
+            "length": value, "width": 2.0, "height": 3.0,
+        }, research=True)
+        assert result["status"] == "INVALID"
+        assert "finite number" in result["error"]
