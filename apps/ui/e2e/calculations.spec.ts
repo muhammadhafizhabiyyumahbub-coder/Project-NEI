@@ -46,7 +46,7 @@ async function seedAndApproveFormula(name, equationText, implKey) {
 
 test.describe('Phase 5 calculations UI', () => {
   test('loads formulas, runs calculation, displays result + evidence_status', async ({ page }) => {
-    const fid = await seedAndApproveFormula('geometry', 'V=L*W*H', 'box_volume');
+    await seedAndApproveFormula('geometry', 'V=L*W*H', 'box_volume');
 
     await page.goto('/calculations');
     await expect(page.locator('h2')).toContainText('Calculations');
