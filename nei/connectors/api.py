@@ -211,7 +211,9 @@ async def probe_connector(connector_id: str):
 
 @router.get("/connectors/{connector_id}/evidence")
 async def list_connector_evidence(connector_id: str, capability: str = None):
-    """Return evidence records for a connector, optionally filtered by capability."""
+    """Return evidence records for a registered connector."""
+    if get_connector_class(connector_id) is None:
+        raise HTTPException(status_code=404, detail="Connector not found")
     async with get_db() as db:
         if capability:
             rows = await db.execute_fetchall(

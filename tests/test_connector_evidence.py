@@ -17,6 +17,12 @@ def setup_db():
     asyncio.run(init_db())
     return TestClient(app)
 
+def test_unknown_connector_evidence_returns_404():
+    client = setup_db()
+    response = client.get("/api/v1/connectors/not-registered/evidence")
+    assert response.status_code == 404
+
+
 def test_connector_evidence_recording():
     client = setup_db()
     
