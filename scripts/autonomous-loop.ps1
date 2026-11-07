@@ -9,33 +9,21 @@ Set-Location "D:\Project NEI"
 
 if ([string]::IsNullOrWhiteSpace($InitialTask)) {
   $InitialTask = @"
-Kamu bekerja sebagai autonomous coding agent untuk project NEI di D:\Project NEI.
+Lanjutkan pekerjaan NEI di D:\Project NEI sampai selesai tanpa berhenti atau banyak bertanya.
 
-Tujuan: kerjakan project sampai selesai tanpa meminta konfirmasi rutin.
+Baca README.md, PLAN.md, IMPLEMENTATION_GUIDE.md, dan spesifikasi relevan. Kerjakan task berikutnya yang belum selesai. Untuk setiap masalah yang selesai, commit perubahan ke Git dan push ke remote bila tersedia. Lanjut ke task berikutnya sampai seluruh rencana selesai atau ada blocker nyata.
 
-Aturan kerja:
-1. Baca README.md, PLAN.md, IMPLEMENTATION_GUIDE.md, dan spesifikasi yang relevan.
-2. Pilih task berikutnya yang belum selesai dari PLAN.md berdasarkan dependency dan prioritas.
-3. Implementasikan task tersebut, bukan hanya membuat rencana.
-4. Jalankan test, lint, type check, atau verification yang relevan.
-5. Jika gagal, diagnosis dan perbaiki lalu jalankan ulang.
-6. Update PLAN.md dan dokumentasi setelah task selesai.
-7. Buat checkpoint Git setelah perubahan stabil.
-8. Lanjutkan langsung ke task berikutnya tanpa menunggu instruksi manusia.
-9. Jangan berhenti hanya untuk memberikan laporan progres.
-10. Jangan mengarang hasil test atau menyatakan selesai tanpa verifikasi.
-
-Berhenti hanya jika semua task yang dapat dikerjakan selesai, ada blocker nyata yang membutuhkan keputusan/credential/perangkat manusia, provider error berulang, atau manusia menekan Ctrl+C.
+Jangan berhenti hanya untuk laporan progres. Verifikasi pekerjaan dengan test/verification sebelum commit. Berhenti hanya jika semua task selesai, ada blocker nyata, atau manusia menekan Ctrl+C.
 "@
 }
 
 if ([string]::IsNullOrWhiteSpace($ContinueTask)) {
   $ContinueTask = @"
-Lanjutkan autonomous work pada D:\Project NEI.
+Lanjutkan NEI sampai selesai.
 
-Baca kondisi repo saat ini dan PLAN.md. Ambil task berikutnya yang belum selesai. Implementasikan, jalankan test/verification, perbaiki kegagalan, update PLAN.md, buat checkpoint Git, lalu lanjutkan ke task berikutnya.
+Ambil task berikutnya dari kondisi repo dan PLAN.md. Selesaikan masalah, jalankan test/verification, commit semua perubahan yang berhasil, push ke remote bila tersedia, update PLAN.md, lalu lanjut ke task berikutnya.
 
-Jangan hanya melaporkan hasil dan jangan meminta konfirmasi rutin. Berhenti hanya untuk blocker nyata, provider error berulang, semua task selesai, atau Ctrl+C.
+Jangan berhenti atau banyak bertanya. Berhenti hanya jika semua task selesai, ada blocker nyata, atau manusia menekan Ctrl+C.
 "@
 }
 
