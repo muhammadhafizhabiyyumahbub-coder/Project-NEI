@@ -23,12 +23,12 @@ test('Phase 1 happy path: project → task → cancel', async ({ page }) => {
   await page.click('button:has-text("Create task")');
 
   // 5. Task list refreshes, task visible
-  await expect(page.locator('li a:has-text("playwright test task")').first()).toBeVisible();
+  await expect(page.locator('a.task-row:has-text("playwright test task")').first()).toBeVisible();
 
   // 6. Open the task detail
-  await page.click('li a:has-text("playwright test task")');
-  await page.waitForURL(/\/tasks\/[^/]+/);
-  await expect(page.locator('span:has-text("pending")').first()).toBeVisible();
+  await page.click('a.task-row:has-text("playwright test task")');
+  await page.waitForURL(/\/projects\/[^/]+\/tasks\/[^/]+/);
+  await expect(page.locator('.task-state:has-text("pending")').first()).toBeVisible();
 
   // 7. Cancel it
   await page.click('button:has-text("Cancel")');
