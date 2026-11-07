@@ -213,7 +213,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 6 — SOLIDWORKS 2022 connector
 
-**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Capability reporting now requires a live active document before marking read-only document/feature inspection SUPPORTED; runtime verification remains UNKNOWN when no document is open.
+**Status:** SOLIDWORKS 30.1.0.0082 is installed and `SldWorks.Application` COM availability is verified in `scripts/check_environment.py`. Filesystem detection, version probe, active-instance COM probe, read-only document/feature inspection, sandbox export, and disposable-part path are implemented. Runtime probe on the available active document (`20261106_205156_sw_export.SLDPRT`) now confirms document metadata and 17 features; runtime verification remains limited to read-only inspection because no production mutation is permitted.
 
 **Goal:** Read-only inspection + one safe write operation.
 
@@ -237,7 +237,7 @@ Principle: **highest risk proved earliest; visible features do not sacrifice dep
 
 ## Phase 7 — Maxsurf 20 V8i connector
 
-**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based and unverified. Detect/version, read-only `.msd` inspection, sandbox import/export, and generated-artifact verification are implemented with reproducible tests. Operator evidence in `docs/maxsurf_engineering_verification_report.md` confirms sandbox generation and manual reopen; NEI-driven input exchange remains UNKNOWN.
+**Status:** Maxsurf 20.00.01.59 is installed at `C:\Program Files\Bentley\Engineering\Maxsurf 20 V8i\` with Modeler, Stability, Resistance, Motions, VPP, Structure, Link, and Fitting modules. No registered COM ProgID was found for those candidate classes, so automation remains file-exchange-based. Runtime probe confirms Maxsurf process availability and read-only inspection of `.msd` files in `D:\File Maxsurf` with SHA-256; sandbox import/export and generated-artifact verification remain implemented. NEI-driven input exchange remains UNKNOWN.
 
 **Goal:** File-exchange or API-driven Maxsurf integration.
 
