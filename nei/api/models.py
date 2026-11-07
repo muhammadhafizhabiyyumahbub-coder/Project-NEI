@@ -71,3 +71,9 @@ class ExecuteRequest(BaseModel):
 class InputRequest(BaseModel):
     """Payload for POST /tasks/{id}/provide-input."""
     inputs: dict[str, Any]
+
+
+class TaskApprovalDecision(BaseModel):
+    """Payload for POST /tasks/{id}/approvals."""
+    action: str  # "approve" | "reject"
+    reason: Optional[str] = None

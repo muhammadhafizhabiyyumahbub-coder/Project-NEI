@@ -592,6 +592,61 @@ async def execute_task_endpoint(task_id: str, body: models.ExecuteRequest):
     }
 
 
+@router.get("/projects/{project_id}/tasks/{task_id}/approvals")
+async def list_task_approvals(project_id: str, task_id: str):
+    """List approval decisions for a task (Phase 2 spec endpoint)."""
+    task = await get_task(task_id)
+    if not task or task["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Task not found")
+    async with get_db() as db:
+        rows = await db.execute_fetchall(
+            "SELECT id, action, reason, created_at FROM task_approvals WHERE task_id = ? ORDER BY created_at DESC",
+            (task_id,),
+        )
+    return [{"id": r[0], "task_id": task_id, "action": r[1], "reason": r[2], "created_at": r[3]} for r in rows]
+
+
+@router.post("/projects/{project_id}/tasks/{task_id}/approvals")
+async def submit_task_approval(project_id: str, task_id: str, body: models.TaskApprovalDecision):
+    """Approve or reject a WAITING_APPROVAL task (Phase 2 spec endpoint).
+
+    approve -> QUEUED; reject -> NEEDS_REVIEW. Both write a task_approvals row
+    and an audit event so the decision is traceable.
+    """
+    from nei.core.task_manager import transition_task
+    from nei.core.audit import log_event
+
+    if body.action not in {"approve", "reject"}:
+        raise HTTPException(status_code=422, detail="action must be approve or reject")
+    task = await get_task(task_id)
+    if not task or task["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if TaskStatus(task["state"]) != TaskStatus.WAITING_APPROVAL:
+        raise HTTPException(status_code=409, detail=f"Task must be in WAITING_APPROVAL state, got {task['state']}")
+
+    target = TaskStatus.QUEUED if body.action == "approve" else TaskStatus.NEEDS_REVIEW
+    now = _now()
+    async with get_db() as db:
+        await db.execute(
+            """INSERT INTO task_approvals (id, task_id, action, reason, created_at) VALUES (?, ?, ?, ?, ?)""",
+            (str(uuid.uuid4()), task_id, body.action, body.reason, now),
+        )
+        await log_event(
+            db, task_id=task_id, event_type="TASK_APPROVAL_DECISION",
+            detail_json={"action": body.action, "reason": body.reason},
+        )
+        await db.commit()
+
+    event = "human_approved" if body.action == "approve" else "human_rejected"
+    updated = await transition_task(task_id, event, target)
+    async with get_db() as db:
+        aid_rows = await db.execute_fetchall(
+            "SELECT id FROM task_approvals WHERE task_id = ? AND action = ? ORDER BY created_at DESC",
+            (task_id, body.action),
+        )
+    return {"approval_id": aid_rows[0][0] if aid_rows else None, "task_state": updated["state"]}
+
+
 @router.post("/tasks/{task_id}/approve", response_model=models.Task)
 async def approve_task_endpoint(task_id: str):
     """Approve a task in WAITING_APPROVAL state, transition to QUEUED."""
