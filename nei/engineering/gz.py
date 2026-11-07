@@ -70,11 +70,20 @@ def generate_gz_curve(
     Returns UNVERIFIED by design; no approval path exists without a
     classification reference case attached to the formula record.
     """
-    if gm_0_m is None:
-        raise ValueError("gm_0_m required")
+    values = {
+        "gm_0_m": gm_0_m,
+        "beam_m": beam_m,
+        "draft_m": draft_m,
+        "min_angle_deg": min_angle_deg,
+        "max_angle_deg": max_angle_deg,
+        "step_deg": step_deg,
+    }
+    if any(value is None or isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(float(value)) for value in values.values()):
+        raise ValueError("GZ inputs must be finite numbers")
     if beam_m <= 0 or draft_m <= 0:
         raise ValueError("beam_m and draft_m must be positive")
-    if min_angle_deg < 0 or max_angle_deg <= min_angle_deg:
+    if min_angle_deg < 0 or max_angle_deg <= min_angle_deg or max_angle_deg > 180:
         raise ValueError("invalid angle range")
     if step_deg <= 0:
         raise ValueError("step_deg must be positive")

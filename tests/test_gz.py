@@ -30,6 +30,10 @@ def test_gz_curve_rejects_invalid_inputs():
         generate_gz_curve(gm_0_m=1.0, beam_m=10.0, draft_m=3.0, min_angle_deg=5, max_angle_deg=1)
     with pytest.raises(ValueError):
         generate_gz_curve(gm_0_m=1.0, beam_m=10.0, draft_m=3.0, step_deg=0)
+    with pytest.raises(ValueError):
+        generate_gz_curve(gm_0_m=float("nan"), beam_m=10.0, draft_m=3.0)
+    with pytest.raises(ValueError):
+        generate_gz_curve(gm_0_m=1.0, beam_m=10.0, draft_m=3.0, max_angle_deg=181)
 
 
 def test_classification_baseline_is_unverified():
